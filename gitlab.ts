@@ -9,6 +9,7 @@ apis in gitlab which i can use to get all commits in a day in all branches and t
 import { google } from '@ai-sdk/google'
 import { generateObject } from 'ai'
 import { z } from 'zod'
+import { createAuthor, createCommitScore, getCommitScoreByCommitId } from './db'
 
 const headers = {
   'PRIVATE-TOKEN': process.env.GITLAB_TOKEN || ''
@@ -61,6 +62,9 @@ function getDateRange() {
   const endDate = new Date(startDate)
   endDate.setUTCHours(23, 59, 59, 999)
 
+  startDate.setDate(startDate.getDate() - 1)
+  endDate.setDate(endDate.getDate() - 1)
+
   return {
     startDate,
     endDate
@@ -72,6 +76,8 @@ async function getCommits(branch: string, startDate: Date, endDate: Date) {
     id: string
     message: string
     author: string
+    date: string
+    url: string
   }[] = []
   let page = 1
 
@@ -104,7 +110,9 @@ async function getCommits(branch: string, startDate: Date, endDate: Date) {
         commits.push({
           id: commit.id,
           message: commit.message,
-          author: commit.author_email.toLowerCase()
+          author: commit.author_email.toLowerCase(),
+          date: commit.committed_date,
+          url: commit.web_url
         })
       }
     })
@@ -162,6 +170,19 @@ async function main(startDate: Date, endDate: Date) {
       const commitDiffs = await getCommitDiff(commit.id)
       if (!commitDiffs.length) continue
 
+      const author = await createAuthor({
+        project: projectId,
+        email: commit.author
+      })
+
+      const existingCommitScore = await getCommitScoreByCommitId(commit.id)
+      if (existingCommitScore) {
+        console.log(
+          `Skipping commit ${commit.id} as it already exists in the database.`
+        )
+        continue
+      }
+
       const { object } = await generateObject({
         model,
         schema: z.object({
@@ -175,8 +196,7 @@ async function main(startDate: Date, endDate: Date) {
           testability: z.number().min(1).max(10),
           impactToNoise: z.number().min(1).max(10),
           overallQuality: z.number().min(1).max(10),
-          summary: z.string(),
-          suggestion: z.string().optional()
+          summary: z.string()
         }),
         messages: [
           {
@@ -301,7 +321,15 @@ async function main(startDate: Date, endDate: Date) {
         ]
       })
 
-      console.log(object, commit)
+      await createCommitScore({
+        authorId: author.id,
+        project: projectId,
+        commitId: commit.id,
+        branch,
+        date: commit.date,
+        commitMessage: commit.message,
+        ...object
+      })
     }
   }
 }
