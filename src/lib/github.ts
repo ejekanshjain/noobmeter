@@ -31,6 +31,14 @@ export const getGithubCommitDiffs = async (
 
   const data = await res.json()
 
+  if (!data.parents) {
+    return []
+  }
+
+  if (data.parents.length > 1) {
+    return []
+  }
+
   if (!Array.isArray(data.files)) {
     throw new Error('Invalid diff response format')
   }

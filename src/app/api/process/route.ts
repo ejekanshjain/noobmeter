@@ -11,7 +11,7 @@ export async function GET() {
     .set({
       queueStatus: 'processing'
     })
-    .where(eq(gitCommitsTable.queueStatus, 'pending'))
+    .where(eq(gitCommitsTable.queueStatus, 'processing'))
     .returning({
       id: gitCommitsTable.id
     })
