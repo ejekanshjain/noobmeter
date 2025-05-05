@@ -25,7 +25,7 @@ const findConnection = async (
     ),
     columns: {
       id: true,
-      secret: true
+      webhookSecret: true
     }
   })
 
@@ -62,7 +62,11 @@ export async function POST(req: Request) {
 
       if (
         foundConnection &&
-        verifyGitHubSignature(rawBody, githubSignature, foundConnection.secret)
+        verifyGitHubSignature(
+          rawBody,
+          githubSignature,
+          foundConnection.webhookSecret
+        )
       ) {
         commits = attachConnectionIdToCommits(body.commits, foundConnection.id)
       }
@@ -83,7 +87,7 @@ export async function POST(req: Request) {
 
       const foundConnection = await findConnection(host, project, 'gitlab')
 
-      if (foundConnection && gitlabToken === foundConnection.secret) {
+      if (foundConnection && gitlabToken === foundConnection.webhookSecret) {
         commits = attachConnectionIdToCommits(body.commits, foundConnection.id)
       }
     }
