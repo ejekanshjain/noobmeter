@@ -1,7 +1,10 @@
 import type { NextConfig } from 'next'
+import './src/env.mjs'
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    reactCompiler: true
+  }
 }
 
 export default nextConfig
