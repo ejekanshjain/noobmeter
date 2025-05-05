@@ -1,4 +1,4 @@
-export const getGitlabCommitDiff = async (
+export const getGitlabCommitDiffs = async (
   host: string,
   project: string,
   commitId: string,

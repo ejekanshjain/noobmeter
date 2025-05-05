@@ -1,6 +1,7 @@
 import { db } from '@/db'
 import { gitCommitsTable } from '@/db/schema'
-import { getGitlabCommitDiff } from '@/lib/gitlab'
+import { getGithubCommitDiffs } from '@/lib/github'
+import { getGitlabCommitDiffs } from '@/lib/gitlab'
 import { scoreCommit } from '@/lib/score-commit'
 import { eq } from 'drizzle-orm'
 
@@ -38,25 +39,39 @@ export async function GET() {
 
     if (!gitCommit) continue
 
+    let commitDiffs: any[] = []
+
     if (gitCommit.gitConnection.type === 'github') {
-    } else if (gitCommit.gitConnection.type === 'gitlab') {
-      const commitDiffs = await getGitlabCommitDiff(
+      commitDiffs = await getGithubCommitDiffs(
         gitCommit.gitConnection.host,
         gitCommit.gitConnection.project,
         gitCommit.sha,
         gitCommit.gitConnection.token
       )
+    } else if (gitCommit.gitConnection.type === 'gitlab') {
+      commitDiffs = await getGitlabCommitDiffs(
+        gitCommit.gitConnection.host,
+        gitCommit.gitConnection.project,
+        gitCommit.sha,
+        gitCommit.gitConnection.token
+      )
+    }
 
-      const score = await scoreCommit(gitCommit.message, commitDiffs)
-
+    if (!commitDiffs.length) {
       await db
-        .update(gitCommitsTable)
-        .set({
-          ...score,
-          queueStatus: 'processed'
-        })
+        .delete(gitCommitsTable)
         .where(eq(gitCommitsTable.id, gitCommitId))
     }
+
+    const score = await scoreCommit(gitCommit.message, commitDiffs)
+
+    await db
+      .update(gitCommitsTable)
+      .set({
+        ...score,
+        queueStatus: 'processed'
+      })
+      .where(eq(gitCommitsTable.id, gitCommitId))
   }
 
   return Response.json({ message: 'Processed' }, { status: 200 })
