@@ -128,12 +128,16 @@ export const sessionsTable = pgTable(
   table => [index().on(table.userId), index().on(table.sessionToken)]
 )
 
-export const gitConnectionsTable = pgTable('git_connections', {
-  id: commonFieldDefs.id('git_connections'),
-  type: gitConnectionTypeEnum('type').notNull(),
-  host: text('host').notNull(),
-  secret: text('secret').notNull(),
-  project: text('project').notNull(),
-  isActive: commonFieldDefs.isActive,
-  ...commonFieldDefs.dates
-})
+export const gitConnectionsTable = pgTable(
+  'git_connections',
+  {
+    id: commonFieldDefs.id('git_connections'),
+    type: gitConnectionTypeEnum('type').notNull(),
+    host: text('host').notNull(),
+    project: text('project').notNull(),
+    isActive: commonFieldDefs.isActive,
+    secret: text('secret').notNull(),
+    ...commonFieldDefs.dates
+  },
+  table => [index().on(table.type, table.host, table.project, table.isActive)]
+)
