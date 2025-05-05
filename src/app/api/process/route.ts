@@ -17,61 +17,72 @@ export async function GET() {
     })
 
   for (const { id: gitCommitId } of toProcess) {
-    const gitCommit = await db.query.gitCommitsTable.findFirst({
-      where: eq(gitCommitsTable.id, gitCommitId),
-      columns: {
-        id: true,
-        sha: true,
-        message: true
-      },
-      with: {
-        gitConnection: {
-          columns: {
-            id: true,
-            type: true,
-            host: true,
-            project: true,
-            token: true
+    try {
+      const gitCommit = await db.query.gitCommitsTable.findFirst({
+        where: eq(gitCommitsTable.id, gitCommitId),
+        columns: {
+          id: true,
+          sha: true,
+          message: true
+        },
+        with: {
+          gitConnection: {
+            columns: {
+              id: true,
+              type: true,
+              host: true,
+              project: true,
+              token: true
+            }
           }
         }
+      })
+
+      if (!gitCommit) continue
+
+      let commitDiffs: any[] = []
+
+      if (gitCommit.gitConnection.type === 'github') {
+        commitDiffs = await getGithubCommitDiffs(
+          gitCommit.gitConnection.host,
+          gitCommit.gitConnection.project,
+          gitCommit.sha,
+          gitCommit.gitConnection.token
+        )
+      } else if (gitCommit.gitConnection.type === 'gitlab') {
+        commitDiffs = await getGitlabCommitDiffs(
+          gitCommit.gitConnection.host,
+          gitCommit.gitConnection.project,
+          gitCommit.sha,
+          gitCommit.gitConnection.token
+        )
       }
-    })
 
-    if (!gitCommit) continue
+      if (!commitDiffs.length) {
+        await db
+          .delete(gitCommitsTable)
+          .where(eq(gitCommitsTable.id, gitCommitId))
+      }
 
-    let commitDiffs: any[] = []
+      const score = await scoreCommit(gitCommit.message, commitDiffs)
 
-    if (gitCommit.gitConnection.type === 'github') {
-      commitDiffs = await getGithubCommitDiffs(
-        gitCommit.gitConnection.host,
-        gitCommit.gitConnection.project,
-        gitCommit.sha,
-        gitCommit.gitConnection.token
-      )
-    } else if (gitCommit.gitConnection.type === 'gitlab') {
-      commitDiffs = await getGitlabCommitDiffs(
-        gitCommit.gitConnection.host,
-        gitCommit.gitConnection.project,
-        gitCommit.sha,
-        gitCommit.gitConnection.token
-      )
-    }
-
-    if (!commitDiffs.length) {
       await db
-        .delete(gitCommitsTable)
+        .update(gitCommitsTable)
+        .set({
+          ...score,
+          queueStatus: 'processed'
+        })
+        .where(eq(gitCommitsTable.id, gitCommitId))
+    } catch (err) {
+      console.error('Error processing commit:', err)
+      await db
+        .update(gitCommitsTable)
+        .set({
+          queueStatus: 'error',
+          errorMessage: JSON.stringify(err)
+        })
         .where(eq(gitCommitsTable.id, gitCommitId))
     }
-
-    const score = await scoreCommit(gitCommit.message, commitDiffs)
-
-    await db
-      .update(gitCommitsTable)
-      .set({
-        ...score,
-        queueStatus: 'processed'
-      })
-      .where(eq(gitCommitsTable.id, gitCommitId))
   }
 
   return Response.json({ message: 'Processed' }, { status: 200 })
