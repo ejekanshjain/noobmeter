@@ -1,5 +1,8 @@
+import { db } from '@/db'
+import { gitConnectionsTable } from '@/db/schema'
 import { getRawBody } from '@/lib/parse-raw-body'
 import { verifyGitHubSignature } from '@/lib/verify-github-signature'
+import { and, eq } from 'drizzle-orm'
 
 export async function POST(req: Request) {
   if (!req.body) return Response.json({ message: 'No body' }, { status: 400 })
@@ -12,7 +15,55 @@ export async function POST(req: Request) {
   const gitlabEvent = req.headers.get('x-gitlab-event')
   const gitlabToken = req.headers.get('x-gitlab-token')
 
-  if (gitlabEvent && gitlabToken) {
+  if (githubEvent && githubSignature) {
+    if (
+      body.repository &&
+      body.repository.full_name &&
+      body.repository.html_url &&
+      body.commits &&
+      Array.isArray(body.commits) &&
+      body.commits.length
+    ) {
+      const project = body.repository.full_name
+      const projectUrl = new URL(body.repository.html_url)
+      const host = projectUrl.host
+
+      const commits = body.commits.map((commit: any) => ({
+        id: commit.id,
+        url: commit.url,
+        message: commit.message.trim(),
+        date: new Date(commit.timestamp).toISOString(),
+        authorEmail: commit.author.email
+      }))
+
+      const foundConnection = await db.query.gitConnectionsTable.findFirst({
+        where: and(
+          eq(gitConnectionsTable.host, host),
+          eq(gitConnectionsTable.project, project),
+          eq(gitConnectionsTable.type, 'github'),
+          eq(gitConnectionsTable.isActive, true)
+        ),
+        columns: {
+          secret: true
+        }
+      })
+
+      if (foundConnection) {
+        const verified = verifyGitHubSignature(
+          rawBody,
+          githubSignature,
+          foundConnection.secret
+        )
+        console.log('Verified:', verified)
+      }
+
+      console.log({
+        host,
+        project,
+        commits
+      })
+    }
+  } else if (gitlabEvent && gitlabToken) {
     if (
       body.object_kind === 'push' &&
       body.event_name === 'push' &&
@@ -34,48 +85,28 @@ export async function POST(req: Request) {
         authorEmail: commit.author.email
       }))
 
-      console.log({
-        host,
-        project,
-        commits
+      const foundConnection = await db.query.gitConnectionsTable.findFirst({
+        where: and(
+          eq(gitConnectionsTable.host, host),
+          eq(gitConnectionsTable.project, project),
+          eq(gitConnectionsTable.type, 'gitlab'),
+          eq(gitConnectionsTable.isActive, true)
+        ),
+        columns: {
+          secret: true
+        }
       })
 
-      const tokenToVerify = gitlabToken
-      console.log('Verified:', tokenToVerify === 'development')
-    }
-  } else if (githubEvent && githubSignature) {
-    if (
-      body.repository &&
-      body.repository.full_name &&
-      body.repository.html_url &&
-      body.commits &&
-      Array.isArray(body.commits) &&
-      body.commits.length
-    ) {
-      const project = body.repository.full_name
-      const projectUrl = new URL(body.repository.html_url)
-      const host = projectUrl.host
-
-      const commits = body.commits.map((commit: any) => ({
-        id: commit.id,
-        url: commit.url,
-        message: commit.message.trim(),
-        date: new Date(commit.timestamp).toISOString(),
-        authorEmail: commit.author.email
-      }))
+      if (foundConnection) {
+        const verified = gitlabToken === foundConnection.secret
+        console.log('Verified:', verified)
+      }
 
       console.log({
         host,
         project,
         commits
       })
-
-      const verified = verifyGitHubSignature(
-        rawBody,
-        githubSignature,
-        'development'
-      )
-      console.log('Verified:', verified)
     }
   }
 
