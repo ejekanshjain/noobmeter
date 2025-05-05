@@ -9,6 +9,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   varchar
 } from 'drizzle-orm/pg-core'
 import { AdapterAccount } from 'next-auth/adapters'
@@ -23,6 +24,13 @@ export const genderEnum = pgEnum('gender', [
 export const gitConnectionTypeEnum = pgEnum('git_connection_type', [
   'github',
   'gitlab'
+])
+
+export const queueStatusEnum = pgEnum('queue_status', [
+  'pending',
+  'processing',
+  'processed',
+  'error'
 ])
 
 const commonFieldDefs = {
@@ -131,7 +139,7 @@ export const sessionsTable = pgTable(
 export const gitConnectionsTable = pgTable(
   'git_connections',
   {
-    id: commonFieldDefs.id('git_connections'),
+    id: commonFieldDefs.id('git_connection'),
     type: gitConnectionTypeEnum('type').notNull(),
     host: text('host').notNull(),
     project: text('project').notNull(),
@@ -140,4 +148,42 @@ export const gitConnectionsTable = pgTable(
     ...commonFieldDefs.dates
   },
   table => [index().on(table.type, table.host, table.project, table.isActive)]
+)
+
+export const gitCommitsTable = pgTable(
+  'git_commits',
+  {
+    id: commonFieldDefs.id('git_commit'),
+    sha: text('sha').notNull(),
+    url: text('url').notNull(),
+    message: text('message').notNull(),
+    date: timestamp('date', {
+      mode: 'date',
+      withTimezone: true
+    }).notNull(),
+    authorEmail: text('author_email').notNull(),
+    gitConnectionId: varchar('git_connection_id')
+      .notNull()
+      .references(() => gitConnectionsTable.id, { onDelete: 'cascade' }),
+
+    // Queue
+    queueStatus: queueStatusEnum('queue_status').default('pending'),
+    errorMessage: text('error_message'),
+
+    // AI Review
+    correctness: integer('correctness'),
+    readability: integer('readability'),
+    bestPractices: integer('bestPractices'),
+    performance: integer('performance'),
+    security: integer('security'),
+    dryness: integer('dryness'),
+    scopeDiscipline: integer('scopeDiscipline'),
+    testability: integer('testability'),
+    impactToNoise: integer('impactToNoise'),
+    overallQuality: integer('overallQuality'),
+    summary: text('summary'),
+
+    ...commonFieldDefs.dates
+  },
+  table => [uniqueIndex().on(table.sha, table.gitConnectionId)]
 )

@@ -1,4 +1,4 @@
-export const getRawBody = async (
+export const parseRawBody = async (
   readable: ReadableStream<Uint8Array>
 ): Promise<Buffer> => {
   const reader = readable.getReader()
