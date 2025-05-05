@@ -186,5 +186,9 @@ export const gitCommitsTable = pgTable(
 
     ...commonFieldDefs.dates
   },
-  table => [uniqueIndex().on(table.sha, table.gitConnectionId)]
+  table => [
+    uniqueIndex().on(table.sha, table.gitConnectionId),
+    index().on(table.gitConnectionId),
+    index().on(table.queueStatus)
+  ]
 )
