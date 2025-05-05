@@ -48,20 +48,16 @@ export async function POST(req: Request) {
         }
       })
 
-      if (foundConnection) {
-        const verified = verifyGitHubSignature(
-          rawBody,
-          githubSignature,
-          foundConnection.secret
-        )
-        console.log('Verified:', verified)
+      if (
+        foundConnection &&
+        verifyGitHubSignature(rawBody, githubSignature, foundConnection.secret)
+      ) {
+        console.log({
+          host,
+          project,
+          commits
+        })
       }
-
-      console.log({
-        host,
-        project,
-        commits
-      })
     }
   } else if (gitlabEvent && gitlabToken) {
     if (
@@ -97,16 +93,13 @@ export async function POST(req: Request) {
         }
       })
 
-      if (foundConnection) {
-        const verified = gitlabToken === foundConnection.secret
-        console.log('Verified:', verified)
+      if (foundConnection && gitlabToken === foundConnection.secret) {
+        console.log({
+          host,
+          project,
+          commits
+        })
       }
-
-      console.log({
-        host,
-        project,
-        commits
-      })
     }
   }
 
