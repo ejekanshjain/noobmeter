@@ -1,7 +1,6 @@
 import { createId } from '@paralleldrive/cuid2'
 import {
   boolean,
-  date,
   index,
   integer,
   pgEnum,
@@ -58,18 +57,13 @@ export const usersTable = pgTable(
   {
     id: commonFieldDefs.id('user'),
     email: varchar('email').notNull().unique(),
-    firstName: varchar('first_name'),
-    lastName: varchar('last_name'),
     name: varchar('display_name'),
     phone: varchar('phone', { length: 20 }),
-    gender: genderEnum('gender'),
-    dateOfBirth: date('date_of_birth', { mode: 'date' }),
     emailVerified: timestamp('email_verified', {
       mode: 'date',
       withTimezone: true
     }),
     image: text('image'),
-    isAdmin: boolean('is_admin').default(false),
     isActive: commonFieldDefs.isActive,
     ...commonFieldDefs.dates
   },
