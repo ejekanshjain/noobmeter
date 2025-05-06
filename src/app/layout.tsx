@@ -1,5 +1,13 @@
+import { AuthSessionProvider } from '@/components/auth-session-provider'
+import { Loader } from '@/components/loader'
+import { ReactQueryProvider } from '@/components/react-query-provider'
+import { ScreenSize } from '@/components/screen-size'
+import { Toaster } from '@/components/ui/sonner'
+import { env } from '@/env.mjs'
 import type { Metadata } from 'next'
+import { ThemeProvider } from 'next-themes'
 import { Geist, Geist_Mono } from 'next/font/google'
+import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import './globals.css'
 
 const geistSans = Geist({
@@ -23,11 +31,20 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <AuthSessionProvider>
+          <NuqsAdapter>
+            <ReactQueryProvider>
+              <ThemeProvider attribute="class" defaultTheme="light">
+                <Loader />
+                {children}
+                {env.NODE_ENV === 'development' ? <ScreenSize /> : null}
+                <Toaster />
+              </ThemeProvider>
+            </ReactQueryProvider>
+          </NuqsAdapter>
+        </AuthSessionProvider>
       </body>
     </html>
   )
