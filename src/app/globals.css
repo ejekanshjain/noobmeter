@@ -117,6 +117,14 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground bg-background min-h-screen font-sans antialiased;
   }
+  button:not([disabled]),
+  [role='button']:not([disabled]) {
+    cursor: pointer;
+  }
+}
+
+@utility container {
+  @apply mx-auto p-4;
 }
