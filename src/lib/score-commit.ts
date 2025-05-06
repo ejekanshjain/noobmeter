@@ -11,16 +11,16 @@ export const scoreCommit = async (
   const { object } = await generateObject({
     model,
     schema: z.object({
-      correctness: z.number().min(1).max(10),
-      readability: z.number().min(1).max(10),
-      bestPractices: z.number().min(1).max(10),
-      performance: z.number().min(1).max(10),
-      security: z.number().min(1).max(10),
-      dryness: z.number().min(1).max(10),
-      scopeDiscipline: z.number().min(1).max(10),
-      testability: z.number().min(1).max(10),
-      impactToNoise: z.number().min(1).max(10),
-      overallQuality: z.number().min(1).max(10),
+      correctness: z.number().int().min(1).max(10),
+      readability: z.number().int().min(1).max(10),
+      bestPractices: z.number().int().min(1).max(10),
+      performance: z.number().int().min(1).max(10),
+      security: z.number().int().min(1).max(10),
+      dryness: z.number().int().min(1).max(10),
+      scopeDiscipline: z.number().int().min(1).max(10),
+      testability: z.number().int().min(1).max(10),
+      impactToNoise: z.number().int().min(1).max(10),
+      overallQuality: z.number().int().min(1).max(10),
       summary: z.string()
     }),
     messages: [
