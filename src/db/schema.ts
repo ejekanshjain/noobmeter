@@ -184,6 +184,15 @@ export const gitCommitsTable = pgTable(
   table => [
     uniqueIndex().on(table.sha, table.gitConnectionId),
     index().on(table.gitConnectionId),
-    index().on(table.queueStatus)
+    index().on(table.queueStatus),
+    index().on(table.date),
+    index().on(table.authorEmail),
+    index().on(table.gitConnectionId, table.queueStatus, table.date),
+    index().on(
+      table.gitConnectionId,
+      table.queueStatus,
+      table.date,
+      table.authorEmail
+    )
   ]
 )
