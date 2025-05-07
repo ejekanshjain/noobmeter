@@ -1,6 +1,5 @@
 import { db } from '@/db'
 import { gitCommitsTable } from '@/db/schema'
-import { env } from '@/env.mjs'
 import { getGithubCommitDiffs } from '@/lib/github'
 import { getGitlabCommitDiffs } from '@/lib/gitlab'
 import { scoreCommit } from '@/lib/score-commit'
@@ -80,13 +79,6 @@ const processInternal = async (toProcess: { id: string }[]) => {
 }
 
 export async function GET() {
-  if (env.NODE_ENV === 'production') {
-    return Response.json(
-      { message: 'This endpoint is not available in production' },
-      { status: 403 }
-    )
-  }
-
   const toProcess = await db
     .update(gitCommitsTable)
     .set({
