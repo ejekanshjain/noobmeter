@@ -4,7 +4,7 @@ import { env } from '@/env.mjs'
 import { getGithubCommitDiffs } from '@/lib/github'
 import { getGitlabCommitDiffs } from '@/lib/gitlab'
 import { scoreCommit } from '@/lib/score-commit'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 export async function GET() {
   if (env.NODE_ENV === 'production') {
@@ -17,7 +17,8 @@ export async function GET() {
   const toProcess = await db
     .update(gitCommitsTable)
     .set({
-      queueStatus: 'processing'
+      queueStatus: 'processing',
+      updatedAt: sql`now()`
     })
     .where(eq(gitCommitsTable.queueStatus, 'pending'))
     .returning({
@@ -78,7 +79,8 @@ export async function GET() {
         .update(gitCommitsTable)
         .set({
           ...score,
-          queueStatus: 'processed'
+          queueStatus: 'processed',
+          updatedAt: sql`now()`
         })
         .where(eq(gitCommitsTable.id, gitCommitId))
     } catch (err) {
@@ -87,7 +89,8 @@ export async function GET() {
         .update(gitCommitsTable)
         .set({
           queueStatus: 'error',
-          errorMessage: JSON.stringify(err)
+          errorMessage: JSON.stringify(err),
+          updatedAt: sql`now()`
         })
         .where(eq(gitCommitsTable.id, gitCommitId))
     }
