@@ -6,25 +6,7 @@ import { getGitlabCommitDiffs } from '@/lib/gitlab'
 import { scoreCommit } from '@/lib/score-commit'
 import { eq, sql } from 'drizzle-orm'
 
-export async function GET() {
-  if (env.NODE_ENV === 'production') {
-    return Response.json(
-      { message: 'This endpoint is not available in production' },
-      { status: 403 }
-    )
-  }
-
-  const toProcess = await db
-    .update(gitCommitsTable)
-    .set({
-      queueStatus: 'processing',
-      updatedAt: sql`now()`
-    })
-    .where(eq(gitCommitsTable.queueStatus, 'pending'))
-    .returning({
-      id: gitCommitsTable.id
-    })
-
+const processInternal = async (toProcess: { id: string }[]) => {
   for (const { id: gitCommitId } of toProcess) {
     try {
       const gitCommit = await db.query.gitCommitsTable.findFirst({
@@ -95,6 +77,42 @@ export async function GET() {
         .where(eq(gitCommitsTable.id, gitCommitId))
     }
   }
+}
+
+export async function GET() {
+  if (env.NODE_ENV === 'production') {
+    return Response.json(
+      { message: 'This endpoint is not available in production' },
+      { status: 403 }
+    )
+  }
+
+  const toProcess = await db
+    .update(gitCommitsTable)
+    .set({
+      queueStatus: 'processing',
+      updatedAt: sql`now()`
+    })
+    .where(eq(gitCommitsTable.queueStatus, 'pending'))
+    .returning({
+      id: gitCommitsTable.id
+    })
+
+  await processInternal(toProcess)
+
+  const toProcessErrors = await db
+    .update(gitCommitsTable)
+    .set({
+      errorMessage: null,
+      queueStatus: 'processing',
+      updatedAt: sql`now()`
+    })
+    .where(eq(gitCommitsTable.queueStatus, 'error'))
+    .returning({
+      id: gitCommitsTable.id
+    })
+
+  await processInternal(toProcessErrors)
 
   return Response.json({ message: 'Processed' }, { status: 200 })
 }
