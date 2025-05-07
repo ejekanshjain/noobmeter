@@ -1,4 +1,5 @@
 import { createId } from '@paralleldrive/cuid2'
+import { sql } from 'drizzle-orm'
 import {
   boolean,
   index,
@@ -188,11 +189,13 @@ export const gitCommitsTable = pgTable(
     index().on(table.date),
     index().on(table.authorEmail),
     index().on(table.gitConnectionId, table.queueStatus, table.date),
-    index().on(
-      table.gitConnectionId,
-      table.queueStatus,
-      table.date,
-      table.authorEmail
-    )
+    index()
+      .on(
+        table.gitConnectionId,
+        table.queueStatus,
+        table.date,
+        table.authorEmail
+      )
+      .where(sql`${table.queueStatus} = 'pending'`)
   ]
 )
