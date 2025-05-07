@@ -4,6 +4,34 @@ import { z } from 'zod'
 
 const model = google('gemini-2.0-flash-exp')
 
+const calculateFinalScore = (scores: Record<string, any>): number => {
+  const qualityMetrics = [
+    scores.correctness,
+    scores.readability,
+    scores.bestPractices,
+    scores.performance,
+    scores.security,
+    scores.dryness,
+    scores.scopeDiscipline,
+    scores.testability,
+    scores.impactToNoise
+  ]
+
+  const avgQuality =
+    qualityMetrics.reduce((sum, score) => sum + score, 0) /
+    qualityMetrics.length
+
+  const workWeight = 0.4
+  const qualityWeight = 0.6
+
+  const scaledWorkComplexity = Math.pow(scores.workComplexity / 10, 1.5) * 10
+
+  const rawScore =
+    (avgQuality * qualityWeight + scaledWorkComplexity * workWeight) * 10
+
+  return Math.max(1, Math.min(100, Math.round(rawScore)))
+}
+
 export const scoreCommit = async (
   commitMessage: string,
   commitDiffs: any[]
@@ -20,7 +48,7 @@ export const scoreCommit = async (
       scopeDiscipline: z.number().int().min(1).max(10),
       testability: z.number().int().min(1).max(10),
       impactToNoise: z.number().int().min(1).max(10),
-      overallQuality: z.number().int().min(1).max(10),
+      workComplexity: z.number().int().min(1).max(10),
       summary: z.string()
     }),
     messages: [
@@ -110,11 +138,13 @@ export const scoreCommit = async (
 
       ---
 
-      ### 10. **Overall Code Contribution Quality**
+      ### 10. **Work Complexity / Effort**
 
-      > *Overall subjective score based on value and cleanliness of the commit.*
+      > *How substantial is the work done in this commit?*
 
-      * A normalized “gut feel” from the AI combining everything
+      * 10 = implementing complex feature, architecting new system, solving hard problems
+      * 5 = moderate changes like adding new components or refactoring medium-sized functions
+      * 1 = trivial changes like removing console.logs, fixing typos, or updating comments
 
       ---
 
@@ -128,11 +158,11 @@ export const scoreCommit = async (
       - Scope Discipline
       - Testability
       - Impact-to-Noise
-      - Overall Quality
+      - Work Complexity
 
       Respond as a JSON with scores only.
 
-      And finally, give a short summary of the commit and its quality in a single line. You can use words like fuck, wtf and curse for noob things and show rage and be angry.
+      And finally, give a short summary of the commit and its quality in a single line. You can use words like fuck, wtf, noob and curse for noob things and show rage and be angry.
       `
       },
       {
@@ -144,5 +174,5 @@ export const scoreCommit = async (
     ]
   })
 
-  return object
+  return { ...object, finalScore: calculateFinalScore(object) }
 }

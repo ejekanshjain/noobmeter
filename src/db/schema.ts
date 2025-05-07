@@ -168,15 +168,16 @@ export const gitCommitsTable = pgTable(
     // AI Review
     correctness: integer('correctness'),
     readability: integer('readability'),
-    bestPractices: integer('bestPractices'),
+    bestPractices: integer('best_practices'),
     performance: integer('performance'),
     security: integer('security'),
     dryness: integer('dryness'),
-    scopeDiscipline: integer('scopeDiscipline'),
+    scopeDiscipline: integer('scope_discipline'),
     testability: integer('testability'),
-    impactToNoise: integer('impactToNoise'),
-    overallQuality: integer('overallQuality'),
+    impactToNoise: integer('impact_to_noise'),
+    workComplexity: integer('work_complexity'),
     summary: text('summary'),
+    finalScore: integer('final_score'),
 
     ...commonFieldDefs.dates
   },
