@@ -11,6 +11,7 @@ import { InferSelectModel } from 'drizzle-orm'
 import { DefaultSession, getServerSession, NextAuthOptions } from 'next-auth'
 import { Adapter } from 'next-auth/adapters'
 import GitHub from 'next-auth/providers/github'
+import GitLab from 'next-auth/providers/gitlab'
 import { cache } from 'react'
 
 declare module 'next-auth' {
@@ -56,6 +57,11 @@ export const authOptions: NextAuthOptions = {
     GitHub({
       clientId: env.AUTH_GITHUB_ID,
       clientSecret: env.AUTH_GITHUB_SECRET,
+      allowDangerousEmailAccountLinking: true
+    }),
+    GitLab({
+      clientId: env.AUTH_GITLAB_ID,
+      clientSecret: env.AUTH_GITLAB_SECRET,
       allowDangerousEmailAccountLinking: true
     })
   ]

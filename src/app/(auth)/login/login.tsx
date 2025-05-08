@@ -16,6 +16,15 @@ export const Login: FC = () => {
       >
         Continue with GitHub
       </Button>
+      <Button
+        onClick={() => {
+          signIn('gitlab', {
+            callbackUrl: `/dashboard`
+          })
+        }}
+      >
+        Continue with GitLab
+      </Button>
     </div>
   )
 }
