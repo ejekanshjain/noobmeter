@@ -15,6 +15,24 @@ const gitConnectionSchema = z.object({
   project: z.string().min(1, 'Project name is required'),
   token: z.string().min(1, 'Access token is required')
 })
+async function validateGitToken(token: string, type: string, project: string) {
+  if (type === 'github') {
+    const response = await fetch(`https://api.github.com/repos/${project}`, {
+      headers: { Authorization: `token ${token}` }
+    })
+    return response.ok
+  } else if (type === 'gitlab') {
+    const response = await fetch(
+      `https://gitlab.com/api/v4/projects/${encodeURIComponent(project)}`,
+      {
+        headers: { 'Private-Token': token }
+      }
+    )
+    return response.ok
+  }
+
+  return false
+}
 
 export type GitConnectionFormValues = z.infer<typeof gitConnectionSchema>
 
@@ -70,6 +88,14 @@ export async function addGitConnection(values: GitConnectionFormValues) {
     }
 
     const project = extractRepositoryPath(validatedData.project)
+    const isValid = await validateGitToken(
+      validatedData.token,
+      validatedData.type,
+      project
+    )
+    if (!isValid) {
+      return { error: 'Invalid token or repository access denied' }
+    }
 
     const existingConnection = await db.query.gitConnectionsTable.findFirst({
       where: table =>
