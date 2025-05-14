@@ -6,7 +6,9 @@ import { scoreCommit } from '@/lib/score-commit'
 import { eq, sql } from 'drizzle-orm'
 
 const processInternal = async (toProcess: { id: string }[]) => {
+  let count = toProcess.length
   for (const { id: gitCommitId } of toProcess) {
+    console.log(count--)
     try {
       const gitCommit = await db.query.gitCommitsTable.findFirst({
         where: eq(gitCommitsTable.id, gitCommitId),

@@ -9,7 +9,8 @@ import {
 
 export const usersRelations = relations(usersTable, ({ many }) => ({
   accounts: many(userOAuthAccountsTable),
-  sessions: many(sessionsTable)
+  sessions: many(sessionsTable),
+  gitConnections: many(gitConnectionsTable)
 }))
 
 export const userOAuthAccountsRelations = relations(
@@ -31,7 +32,11 @@ export const sessionsRelations = relations(sessionsTable, ({ one }) => ({
 
 export const gitConnectionsRelations = relations(
   gitConnectionsTable,
-  ({ many }) => ({
+  ({ one, many }) => ({
+    user: one(usersTable, {
+      fields: [gitConnectionsTable.userId],
+      references: [usersTable.id]
+    }),
     commits: many(gitCommitsTable)
   })
 )

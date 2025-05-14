@@ -135,6 +135,9 @@ export const gitConnectionsTable = pgTable(
   'git_connections',
   {
     id: commonFieldDefs.id('git_connection'),
+    userId: varchar('user_id')
+      .notNull()
+      .references(() => usersTable.id, { onDelete: 'cascade' }),
     type: gitConnectionTypeEnum('type').notNull(),
     host: text('host').notNull(),
     project: text('project').notNull(),
