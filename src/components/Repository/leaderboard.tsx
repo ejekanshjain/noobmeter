@@ -20,7 +20,7 @@ import {
   Trophy,
   User
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 interface LeaderboardProps {
   repositoryId: string
@@ -42,11 +42,7 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
-  useEffect(() => {
-    loadLeaderboard()
-  }, [repositoryId])
-
-  async function loadLeaderboard() {
+  const loadLeaderboard = useCallback(async () => {
     setLoading(true)
     try {
       const result = await getRepositoryLeaderboard(repositoryId)
@@ -58,7 +54,11 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [repositoryId])
+
+  useEffect(() => {
+    loadLeaderboard()
+  }, [loadLeaderboard, repositoryId])
 
   const handleRefresh = async () => {
     setRefreshing(true)

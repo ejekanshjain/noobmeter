@@ -35,9 +35,11 @@ export default function Home() {
       typeText()
     }, typingDelayStart)
 
+    const currentRef = typingRef.current
+
     return () => {
       clearTimeout(startTypingTimeout)
-      typingRef.current.isTyping = false
+      currentRef.isTyping = false
     }
   }, [])
 
@@ -212,8 +214,8 @@ export default function Home() {
               className={`mx-auto max-w-2xl text-sm font-light ${colors.textMuted}`}
             >
               Our advanced AI analyzes your coding patterns, commit messages,
-              and code quality to determine your exact level of noobness. It's
-              science!
+              and code quality to determine your exact level of noobness.
+              It&apos;s science!
             </p>
           </motion.div>
 

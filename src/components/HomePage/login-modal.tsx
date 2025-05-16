@@ -77,7 +77,7 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
                     Welcome back, {session.user?.name || 'User'}!
                   </p>
                   <p className="text-sm text-[#94a3b8]">
-                    You're already logged in
+                    You&apos;re already logged in
                   </p>
                 </div>
 

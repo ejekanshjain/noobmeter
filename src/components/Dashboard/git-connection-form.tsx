@@ -179,21 +179,27 @@ export function GitConnectionForm() {
           {activeTab === 'github' ? (
             <ol className="list-inside list-decimal space-y-2 text-sm">
               <li>Go to your GitHub repository</li>
-              <li>Click on "Settings" → "Webhooks" → "Add webhook"</li>
+              <li>
+                Click on &quot;Settings&quot; → &quot;Webhooks&quot; → &quot;Add
+                webhook&quot;
+              </li>
               <li>Set the Payload URL to the Webhook URL above</li>
-              <li>Set Content type to "application/json"</li>
+              <li>Set Content type to &quot;application/json&quot;</li>
               <li>Set the Secret to the Webhook Secret above</li>
-              <li>Select "Just the push event"</li>
-              <li>Ensure "Active" is checked and click "Add webhook"</li>
+              <li>Select &quot;Just the push event&quot;</li>
+              <li>
+                Ensure &quot;Active&quot; is checked and click &quot;Add
+                webhook&quot;
+              </li>
             </ol>
           ) : (
             <ol className="list-inside list-decimal space-y-2 text-sm">
               <li>Go to your GitLab repository</li>
-              <li>Click on "Settings" → "Webhooks"</li>
+              <li>Click on &quote;Settings&quote; → &quote;Webhooks&quote;</li>
               <li>Set the URL to the Webhook URL above</li>
               <li>Set the Secret token to the Webhook Secret above</li>
-              <li>Check the "Push events" trigger</li>
-              <li>Click "Add webhook"</li>
+              <li>Check the &quote;Push events&quote; trigger</li>
+              <li>Click &quote;Add webhook&quote;</li>
             </ol>
           )}
         </div>

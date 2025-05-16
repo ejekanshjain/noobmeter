@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Filter, GitBranch, GitCommit, RefreshCw, Search } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { CommitCard } from '../Dashboard/commit-card'
 
 interface CommitsListProps {
@@ -53,11 +53,7 @@ export function CommitsList({ repositoryId, repository }: CommitsListProps) {
   })
   const [authors, setAuthors] = useState<string[]>([])
 
-  useEffect(() => {
-    loadCommits()
-  }, [repositoryId, pagination.offset])
-
-  async function loadCommits() {
+  const loadCommits = useCallback(async () => {
     setLoading(true)
     try {
       const result = await getRepositoryCommits(
@@ -67,10 +63,10 @@ export function CommitsList({ repositoryId, repository }: CommitsListProps) {
       )
       if (!result.error) {
         setCommits(result.commits || [])
-        setPagination({
-          ...pagination,
-          total: Number(pagination.total)
-        })
+        setPagination(prev => ({
+          ...prev,
+          total: Number(prev.total)
+        }))
 
         const uniqueAuthors = Array.from(
           new Set(result.commits?.map((commit: any) => commit.authorEmail))
@@ -82,7 +78,11 @@ export function CommitsList({ repositoryId, repository }: CommitsListProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [pagination, repositoryId])
+
+  useEffect(() => {
+    loadCommits()
+  }, [repositoryId, pagination.offset, loadCommits])
 
   const handleRefresh = async () => {
     setRefreshing(true)

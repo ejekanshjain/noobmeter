@@ -295,7 +295,8 @@ export function RepositoryOverview({
             <div className="flex h-40 flex-col items-center justify-center gap-4 rounded-lg border border-dashed">
               <p className="text-muted-foreground">No commits available yet</p>
               <p className="text-muted-foreground/70 text-sm">
-                Commits will appear once they've been pushed to this repository
+                Commits will appear once they&apos;ve been pushed to this
+                repository
               </p>
             </div>
           )}
