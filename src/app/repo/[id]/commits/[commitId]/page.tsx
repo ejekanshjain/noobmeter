@@ -19,7 +19,7 @@ export default async function CommitPage({
     return notFound()
   }
 
-  const { commit, error } = await getCommitDetails(p.commitId)
+  const { commit } = await getCommitDetails(p.commitId)
 
   return (
     <DashboardShell

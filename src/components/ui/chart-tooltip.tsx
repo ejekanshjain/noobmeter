@@ -11,8 +11,7 @@ export function ChartTooltip({
   payload,
   label,
   formatter,
-  labelFormatter,
-  ...props
+  labelFormatter
 }: TooltipProps<ValueType, NameType>) {
   if (!active || !payload) {
     return null
@@ -22,7 +21,7 @@ export function ChartTooltip({
     <div className="bg-background rounded-lg border p-2 shadow-sm">
       {label && (
         <div className="text-xs font-medium">
-          {labelFormatter ? labelFormatter(label) : label}
+          {labelFormatter ? labelFormatter(label, payload) : label}
         </div>
       )}
       <div className="flex flex-col gap-0.5">
@@ -35,7 +34,13 @@ export function ChartTooltip({
             <span className="font-medium">{item.name}</span>
             <span>
               {formatter
-                ? formatter(item.value as number, item.name, item, index)
+                ? formatter(
+                    item.value as number,
+                    item.name ?? '',
+                    item,
+                    index,
+                    payload
+                  )
                 : item.value}
             </span>
           </div>
