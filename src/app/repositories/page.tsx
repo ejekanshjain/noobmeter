@@ -1,4 +1,4 @@
-import { DashboardShell } from '@/components/repositories/shell'
+import { DashboardShell } from '@/components/Dashboard/shell'
 import { RepositoriesList } from '@/components/Repositories/list'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getAuthSession } from '@/lib/auth'
@@ -22,7 +22,7 @@ export default async function RepositoriesPage() {
       <Suspense fallback={<RepositoriesSkeleton />}>
         <RepositoriesList />
       </Suspense>
-    </repositoriesShell>
+    </DashboardShell>
   )
 }
 

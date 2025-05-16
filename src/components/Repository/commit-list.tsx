@@ -32,7 +32,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Filter, GitBranch, GitCommit, RefreshCw, Search } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { CommitCard } from '../repositories/commit-card'
+import { CommitCard } from '../Dashboard/commit-card'
 
 interface CommitsListProps {
   repositoryId: string
