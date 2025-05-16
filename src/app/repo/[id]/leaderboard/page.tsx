@@ -9,7 +9,7 @@ import { Suspense } from 'react'
 export default async function LeaderboardPage({
   params
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
   const session = await getAuthSession()
 
@@ -17,7 +17,9 @@ export default async function LeaderboardPage({
     return notFound()
   }
 
-  const { connection, error } = await getGitConnection(params.id)
+  const p = await params
+
+  const { connection, error } = await getGitConnection(p.id)
 
   if (error || !connection) {
     return notFound()
@@ -36,7 +38,7 @@ export default async function LeaderboardPage({
       }
     >
       <Suspense fallback={<LeaderboardSkeleton />}>
-        <Leaderboard repositoryId={params.id} repository={connection} />
+        <Leaderboard repositoryId={p.id} repository={connection} />
       </Suspense>
     </DashboardShell>
   )
