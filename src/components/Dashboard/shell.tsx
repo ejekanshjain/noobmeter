@@ -17,6 +17,7 @@ interface DashboardShellProps {
   }
 }
 
+// Remove the gradient backgrounds and simplify the container
 export function DashboardShell({ children, user }: DashboardShellProps) {
   const [mounted, setMounted] = useState(false)
 
@@ -28,7 +29,8 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
 
   return (
     <SidebarProvider>
-      <div className="relative flex min-h-screen w-full bg-white dark:bg-black">
+      <div className="bg-background relative flex min-h-screen w-full">
+        {/* Remove decorative backgrounds */}
         <DashboardSidebar />
 
         <div className="flex w-full flex-1 flex-col">

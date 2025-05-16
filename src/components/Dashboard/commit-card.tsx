@@ -1,235 +1,155 @@
 'use client'
 
-import type React from 'react'
-
+import { triggerCommitAnalysis } from '@/app/actions/commits'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { formatDistanceToNow } from 'date-fns'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from '@/components/ui/tooltip'
-import { AnimatePresence, motion } from 'framer-motion'
-import {
-  AlertTriangle,
-  BookOpen,
-  CheckCircle,
-  ChevronDown,
-  ChevronUp,
-  Code,
+  AlertCircle,
+  Clock,
+  ExternalLink,
   GitCommit,
-  MessageSquare,
-  Sparkles
+  RefreshCw
 } from 'lucide-react'
+import Link from 'next/link'
 import { useState } from 'react'
 
-interface CommitMetrics {
-  correctness?: number
-  readability?: number
-  bestPractices?: number
-  performance?: number
-  security?: number
-  dryness?: number
-  scopeDiscipline?: number
-  testability?: number
-  impactToNoise?: number
-  workComplexity?: number
-  finalScore: number
+interface CommitCardProps {
+  commit: any
 }
 
-interface Commit {
-  id: string
-  sha: string
-  repo: string
-  message: string
-  date: string
-  metrics: CommitMetrics
-  summary?: string
-  url?: string
-}
+export function CommitCard({ commit }: CommitCardProps) {
+  const [isRetrying, setIsRetrying] = useState(false)
 
-export function CommitCard({ commit }: { commit: Commit }) {
-  const [expanded, setExpanded] = useState(false)
+  const handleRetry = async () => {
+    if (isRetrying) return
 
-  const getScoreColor = (score: number) => {
-    if (score >= 8) return 'bg-green-500'
-    if (score >= 6) return 'bg-amber-500'
-    return 'bg-red-500'
-  }
-
-  const getScoreTextColor = (score: number) => {
-    if (score >= 8) return 'text-green-500'
-    if (score >= 6) return 'text-amber-500'
-    return 'text-red-500'
-  }
-
-  const getMetricIcon = (name: string, value?: number) => {
-    if (!value) return null
-
-    const icons: Record<string, React.ReactNode> = {
-      correctness: <CheckCircle className="h-4 w-4" />,
-      readability: <BookOpen className="h-4 w-4" />,
-      security: <AlertTriangle className="h-4 w-4" />,
-      performance: <Sparkles className="h-4 w-4" />
+    setIsRetrying(true)
+    try {
+      await triggerCommitAnalysis(commit.id)
+    } catch (error) {
+      console.error('Failed to retry commit analysis:', error)
+    } finally {
+      setIsRetrying(false)
     }
-
-    return icons[name] || <Code className="h-4 w-4" />
   }
 
-  const getMetricColor = (value?: number) => {
-    if (!value) return 'bg-gray-500'
-    if (value >= 8) return 'bg-green-500'
-    if (value >= 6) return 'bg-amber-500'
-    return 'bg-red-500'
+  const formattedDate = commit.date
+    ? formatDistanceToNow(new Date(commit.date), { addSuffix: true })
+    : 'Unknown date'
+
+  const truncatedMessage =
+    commit.message.length > 100
+      ? commit.message.substring(0, 100) + '...'
+      : commit.message
+
+  const getStatusBadge = () => {
+    switch (commit.queueStatus) {
+      case 'pending':
+        return (
+          <Badge
+            variant="outline"
+            className="border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-800 dark:bg-amber-900 dark:text-amber-300"
+          >
+            <Clock className="mr-1 h-3 w-3" />
+            Pending
+          </Badge>
+        )
+      case 'processing':
+        return (
+          <Badge
+            variant="outline"
+            className="border-blue-200 bg-blue-100 text-blue-800 dark:border-blue-800 dark:bg-blue-900 dark:text-blue-300"
+          >
+            <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
+            Processing
+          </Badge>
+        )
+      case 'error':
+        return (
+          <Badge
+            variant="outline"
+            className="border-red-200 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-900 dark:text-red-300"
+          >
+            <AlertCircle className="mr-1 h-3 w-3" />
+            Error
+          </Badge>
+        )
+      case 'processed':
+        return null
+      default:
+        return null
+    }
+  }
+
+  // Get score color
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-600 dark:text-green-400'
+    if (score >= 60) return 'text-emerald-600 dark:text-emerald-400'
+    if (score >= 40) return 'text-amber-600 dark:text-amber-400'
+    if (score >= 20) return 'text-orange-600 dark:text-orange-400'
+    return 'text-red-600 dark:text-red-400'
   }
 
   return (
-    <Card className="border-primary/20 bg-card/50 group hover:border-primary/40 overflow-hidden backdrop-blur-sm transition-all duration-300">
-      <div className="from-primary/5 to-secondary/5 absolute inset-0 rounded-lg bg-gradient-to-br via-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
-      <CardContent className="relative z-10 p-4">
-        <div className="flex flex-col space-y-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-3">
-              <div className="mt-1">
-                <GitCommit className="text-primary h-5 w-5" />
-              </div>
-              <div>
-                <div className="font-medium">{commit.message}</div>
-                <div className="text-muted-foreground mt-1 flex items-center gap-2 text-sm">
-                  <Badge
-                    variant="outline"
-                    className="border-primary/20 bg-primary/10 text-xs"
-                  >
-                    {commit.repo}
-                  </Badge>
-                  <span>{commit.date}</span>
-                  {commit.sha && (
-                    <span className="text-muted-foreground text-xs">
-                      {commit.sha.substring(0, 7)}
-                    </span>
-                  )}
-                </div>
-              </div>
+    <Card className="border-border overflow-hidden border transition-shadow hover:shadow-md dark:bg-black">
+      <CardContent className="p-0">
+        <div className="flex flex-col items-start gap-4 p-4 md:flex-row md:items-center">
+          <div className="flex-1">
+            <div className="mb-1 flex items-center gap-2">
+              <GitCommit className="h-4 w-4 flex-shrink-0 text-cyan-500 dark:text-cyan-400" />
+              <span className="text-muted-foreground font-mono text-sm">
+                {commit.sha.substring(0, 7)}
+              </span>
+              {getStatusBadge()}
             </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center">
-                <div
-                  className={`h-8 w-8 rounded-full ${getScoreColor(commit.metrics.finalScore)} animate-pulse-glow flex items-center justify-center font-bold text-white`}
-                >
-                  {commit.metrics.finalScore.toFixed(1)}
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setExpanded(!expanded)}
-                aria-label={expanded ? 'Collapse' : 'Expand'}
-                className="relative overflow-hidden"
-              >
-                <div className="bg-primary/10 absolute inset-0 rounded-md opacity-0 transition-opacity hover:opacity-100"></div>
-                {expanded ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
+
+            <h3 className="mb-1 font-medium">{truncatedMessage}</h3>
+
+            <div className="text-muted-foreground flex items-center gap-2 text-xs">
+              <span>{commit.authorEmail}</span>
+              <span>•</span>
+              <span>{formattedDate}</span>
             </div>
           </div>
 
-          <AnimatePresence>
-            {expanded && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="overflow-hidden"
-              >
-                <div className="border-primary/20 mt-3 border-t pt-3">
-                  {/* Metrics Grid */}
-                  <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <TooltipProvider>
-                      {Object.entries(commit.metrics)
-                        .filter(
-                          ([key, value]) =>
-                            key !== 'finalScore' && value !== undefined
-                        )
-                        .slice(0, 8)
-                        .map(([key, value]) => (
-                          <Tooltip key={key}>
-                            <TooltipTrigger asChild>
-                              <div className="bg-card/30 border-primary/10 flex items-center gap-2 rounded-md border p-2">
-                                <div
-                                  className={`h-6 w-6 rounded-full ${getMetricColor(value)} flex items-center justify-center text-white`}
-                                >
-                                  {getMetricIcon(key, value) ||
-                                    value?.toFixed(1)}
-                                </div>
-                                <span className="text-xs capitalize">
-                                  {key.replace(/([A-Z])/g, ' $1').trim()}
-                                </span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>
-                                {key.replace(/([A-Z])/g, ' $1').trim()}:{' '}
-                                {value?.toFixed(1)}/10
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        ))}
-                    </TooltipProvider>
+          <div className="flex items-center gap-4">
+            {commit.queueStatus === 'processed' ? (
+              <>
+                <div className="flex flex-col items-center">
+                  <div className="text-muted-foreground mb-1 text-xs">
+                    Score
                   </div>
-
-                  {commit.summary && (
-                    <div className="mb-4 flex items-start gap-2">
-                      <Sparkles className="text-primary mt-0.5 h-5 w-5" />
-                      <div>
-                        <h4 className="mb-1 font-medium">AI Feedback</h4>
-                        <p className="text-muted-foreground text-sm">
-                          {commit.summary}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mt-4 flex gap-2">
-                    {commit.url && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gradient-border group gap-1"
-                        asChild
-                      >
-                        <a
-                          href={commit.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Code className="h-4 w-4" />
-                          <span className="group-hover:text-gradient transition-all duration-300">
-                            View Code
-                          </span>
-                        </a>
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gradient-border group gap-1"
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="group-hover:text-gradient transition-all duration-300">
-                        Request More Feedback
-                      </span>
-                    </Button>
+                  <div
+                    className={`text-xl font-bold ${getScoreColor(commit.finalScore)}`}
+                  >
+                    {commit.finalScore}
                   </div>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <Link
+                  href={`/repo/${encodeURIComponent(commit.gitConnection?.project)}/commits/${commit.id}`}
+                >
+                  <Button variant="outline" size="sm" className="ml-2">
+                    <ExternalLink className="mr-1 h-4 w-4" />
+                    Details
+                  </Button>
+                </Link>
+              </>
+            ) : commit.queueStatus === 'error' ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRetry}
+                disabled={isRetrying}
+              >
+                <RefreshCw
+                  className={`mr-1 h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`}
+                />
+                Retry
+              </Button>
+            ) : null}
+          </div>
         </div>
       </CardContent>
     </Card>

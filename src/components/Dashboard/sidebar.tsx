@@ -4,9 +4,8 @@ import type React from 'react'
 
 import { Button } from '@/components/ui/button'
 import {
-  Sidebar,
+  Sidebar as ShadcnSidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -21,12 +20,10 @@ import {
   ChevronRight,
   Code2,
   GitBranch,
-  History,
+  GitCommit,
   LayoutDashboard,
-  Lightbulb,
   Settings,
-  Users,
-  Zap
+  Users
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -39,57 +36,53 @@ interface NavItem {
   badge?: number | string
 }
 
-const mainNavItems: NavItem[] = [
-  {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: <LayoutDashboard className="h-5 w-5" />
-  },
-  {
-    title: 'Repositories',
-    href: '/repositories',
-    icon: <GitBranch className="h-5 w-5" />
-  },
-  {
-    title: 'Analytics',
-    href: '/analytics',
-    icon: <BarChart3 className="h-5 w-5" />
-  },
-  {
-    title: 'History',
-    href: '/history',
-    icon: <History className="h-5 w-5" />
-  }
-]
-
-const secondaryNavItems: NavItem[] = [
-  {
-    title: 'Team',
-    href: '/team',
-    icon: <Users className="h-5 w-5" />
-  },
-  {
-    title: 'Achievements',
-    href: '/achievements',
-    icon: <Award className="h-5 w-5" />,
-    badge: 'New'
-  },
-  {
-    title: 'Insights',
-    href: '/insights',
-    icon: <Lightbulb className="h-5 w-5" />
-  },
-  {
-    title: 'Settings',
-    href: '/settings',
-    icon: <Settings className="h-5 w-5" />
-  }
-]
-
 export function DashboardSidebar() {
   const pathname = usePathname()
   const { state, toggleSidebar } = useSidebar()
   const [mounted, setMounted] = useState(false)
+
+  // Check if we're in a repository context
+  const repoId = pathname.includes('/repo/')
+    ? pathname.split('/repo/')[1]?.split('/')[0]
+    : null
+
+  // Define navigation items based on context
+  const mainNavItems: NavItem[] = repoId
+    ? [
+        {
+          title: 'Overview',
+          href: `/repo/${repoId}`,
+          icon: <LayoutDashboard className="h-5 w-5" />
+        },
+        {
+          title: 'Commits',
+          href: `/repo/${repoId}/commits`,
+          icon: <GitCommit className="h-5 w-5" />
+        },
+        {
+          title: 'Analytics',
+          href: `/repo/${repoId}/analytics`,
+          icon: <BarChart3 className="h-5 w-5" />
+        },
+        {
+          title: 'Leaderboard',
+          href: `/repo/${repoId}/leaderboard`,
+          icon: <Award className="h-5 w-5" />,
+          badge: 'New'
+        }
+      ]
+    : [
+        {
+          title: 'Repositories',
+          href: '/repositories',
+          icon: <GitBranch className="h-5 w-5" />
+        },
+        {
+          title: 'Settings',
+          href: '/settings',
+          icon: <Settings className="h-5 w-5" />
+        }
+      ]
 
   useEffect(() => {
     setMounted(true)
@@ -98,14 +91,17 @@ export function DashboardSidebar() {
   if (!mounted) return null
 
   return (
-    <Sidebar>
-      <SidebarHeader className="border-b border-gray-200 dark:border-gray-700">
+    <ShadcnSidebar>
+      <SidebarHeader className="">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <Code2 className="h-5 w-5 text-black dark:text-white" />
+            <div className="relative">
+              <div className="absolute inset-0 animate-pulse rounded-full bg-teal-500/20 blur-md dark:bg-teal-400/20"></div>
+              <Code2 className="relative h-6 w-6 text-teal-600 dark:text-teal-400" />
+            </div>
             <span
               className={cn(
-                'text-lg font-medium transition-opacity duration-200',
+                'bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-xl font-bold text-transparent transition-opacity duration-200 dark:from-teal-400 dark:to-cyan-400',
                 state === 'collapsed' && 'opacity-0'
               )}
             >
@@ -116,7 +112,7 @@ export function DashboardSidebar() {
             variant="ghost"
             size="icon"
             onClick={toggleSidebar}
-            className="h-7 w-7 rounded-full"
+            className="h-7 w-7 rounded-full hover:bg-teal-100 dark:hover:bg-teal-900/30"
           >
             {state === 'expanded' ? (
               <ChevronLeft className="h-4 w-4" />
@@ -127,7 +123,7 @@ export function DashboardSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="">
         <div className="px-3 py-2">
           <h3
             className={cn(
@@ -135,7 +131,7 @@ export function DashboardSidebar() {
               state === 'collapsed' && 'opacity-0'
             )}
           >
-            MAIN
+            {repoId ? 'REPOSITORY' : 'MAIN'}
           </h3>
           <SidebarMenu>
             {mainNavItems.map(item => (
@@ -149,7 +145,7 @@ export function DashboardSidebar() {
                     {item.icon}
                     <span>{item.title}</span>
                     {item.badge && (
-                      <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-gray-100 px-1 text-xs dark:bg-gray-800">
+                      <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-teal-100 px-1 text-xs text-teal-700 dark:bg-teal-900/50 dark:text-teal-400">
                         {item.badge}
                       </span>
                     )}
@@ -160,61 +156,66 @@ export function DashboardSidebar() {
           </SidebarMenu>
         </div>
 
-        <div className="mt-2 px-3 py-2">
-          <h3
-            className={cn(
-              'mb-1 px-2 text-xs font-medium text-gray-500 dark:text-gray-400',
-              state === 'collapsed' && 'opacity-0'
-            )}
-          >
-            TOOLS
-          </h3>
-          <SidebarMenu>
-            {secondaryNavItems.map(item => (
-              <SidebarMenuItem key={item.href}>
+        {repoId && (
+          <div className="mt-2 px-3 py-2">
+            <h3
+              className={cn(
+                'mb-1 px-2 text-xs font-medium text-gray-500 dark:text-gray-400',
+                state === 'collapsed' && 'opacity-0'
+              )}
+            >
+              ACTIONS
+            </h3>
+            <SidebarMenu>
+              <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={pathname === item.href}
-                  tooltip={item.title}
+                  tooltip="Back to Repositories"
+                  className="text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800/60"
                 >
-                  <Link href={item.href} className="flex items-center gap-2">
-                    {item.icon}
-                    <span>{item.title}</span>
-                    {item.badge && (
-                      <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-gray-100 px-1 text-xs dark:bg-gray-800">
-                        {item.badge}
-                      </span>
-                    )}
+                  <Link
+                    href="/repositories"
+                    className="flex items-center gap-2"
+                  >
+                    <GitBranch className="h-5 w-5" />
+                    <span>All Repositories</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </div>
-      </SidebarContent>
-
-      <SidebarFooter className="border-t border-gray-200 p-3 dark:border-gray-700">
-        <div
-          className={cn(
-            'rounded-lg bg-gray-100 p-3 transition-opacity duration-200 dark:bg-gray-800',
-            state === 'collapsed' && 'opacity-0'
-          )}
-        >
-          <div className="mb-2 flex items-center gap-2">
-            <Zap className="h-4 w-4 text-black dark:text-white" />
-            <h4 className="text-sm font-medium">Upgrade to Pro</h4>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Team"
+                  className="text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800/60"
+                >
+                  <Link
+                    href={`/repo/${repoId}/team`}
+                    className="flex items-center gap-2"
+                  >
+                    <Users className="h-5 w-5" />
+                    <span>Team</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Settings"
+                  className="text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800/60"
+                >
+                  <Link
+                    href={`/repo/${repoId}/settings`}
+                    className="flex items-center gap-2"
+                  >
+                    <Settings className="h-5 w-5" />
+                    <span>Settings</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
           </div>
-          <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-            Get advanced analytics and unlimited repositories
-          </p>
-          <Button
-            size="sm"
-            className="w-full bg-black text-white dark:bg-white dark:text-black"
-          >
-            Upgrade
-          </Button>
-        </div>
-      </SidebarFooter>
-    </Sidebar>
+        )}
+      </SidebarContent>
+    </ShadcnSidebar>
   )
 }

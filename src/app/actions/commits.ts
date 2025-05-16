@@ -67,7 +67,6 @@ export async function getCommitDetails(commitId: string) {
         gitConnection: true
       }
     })
-
     if (!commit) {
       return { error: 'Commit not found' }
     }
