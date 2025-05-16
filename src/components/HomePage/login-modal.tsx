@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Github, Loader2 } from 'lucide-react'
+import { ArrowRight, Github, Gitlab, Loader2 } from 'lucide-react'
 import { signIn, signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -16,10 +16,10 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const { data: session } = useSession()
 
-  const handleGitHubLogin = async () => {
+  const handleLogin = async (method: 'github' | 'gitlab') => {
     setIsLoading(true)
-    await signIn('github', {
-      callbackUrl: `/dashboard`
+    await signIn(method, {
+      callbackUrl: `/repositories`
     })
   }
 
@@ -50,7 +50,7 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
               <>
                 <Button
                   className="group w-full bg-gradient-to-r from-[#00e6ff] to-[#00ccb4] transition-all duration-500 hover:from-[#00ccb4] hover:to-[#00e6ff]"
-                  onClick={handleGitHubLogin}
+                  onClick={() => handleLogin('github')}
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -69,6 +69,19 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
                     <span className="bg-[#0f172a] px-2 text-[#94a3b8]">Or</span>
                   </div>
                 </div>
+
+                <Button
+                  className="group w-full bg-gradient-to-r from-[#00e6ff] to-[#00ccb4] transition-all duration-500 hover:from-[#00ccb4] hover:to-[#00e6ff]"
+                  onClick={() => handleLogin('gitlab')}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Gitlab className="mr-2 h-4 w-4" />
+                  )}
+                  Continue with GitLab
+                </Button>
               </>
             ) : (
               <>
@@ -85,7 +98,7 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
                   className="group w-full bg-gradient-to-r from-[#00e6ff] to-[#00ccb4] transition-all duration-500 hover:from-[#00ccb4] hover:to-[#00e6ff]"
                   asChild
                 >
-                  <Link href="/dashboard">
+                  <Link href="/repositories">
                     Go to Dashboard
                     <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Link>
