@@ -125,7 +125,7 @@ export async function addGitConnection(values: GitConnectionFormValues) {
       })
       .returning()
 
-    revalidatePath('/dashboard')
+    revalidatePath('/repositories')
     revalidatePath('/repositories')
 
     return {
@@ -167,7 +167,7 @@ export async function deleteGitConnection(id: string) {
       .set({ isActive: false })
       .where(eq(gitConnectionsTable.id, id))
 
-    revalidatePath('/dashboard')
+    revalidatePath('/repositories')
     revalidatePath('/repositories')
 
     return { success: true }

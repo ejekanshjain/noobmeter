@@ -1,5 +1,5 @@
 import { getGitConnection } from '@/app/actions/git-connections'
-import { DashboardShell } from '@/components/Dashboard/shell'
+import { DashboardShell } from '@/components/repositories/shell'
 import { CommitsList } from '@/components/Repository/commit-list'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getAuthSession } from '@/lib/auth'
@@ -39,7 +39,7 @@ export default async function CommitsPage({
       <Suspense fallback={<CommitsSkeleton />}>
         <CommitsList repositoryId={p.id} repository={connection} />
       </Suspense>
-    </DashboardShell>
+    </repositoriesShell>
   )
 }
 

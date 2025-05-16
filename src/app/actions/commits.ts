@@ -257,7 +257,7 @@ export async function triggerCommitAnalysis(commitId: string) {
       .set({ queueStatus: 'pending' })
       .where(eq(gitCommitsTable.id, commitId))
 
-    revalidatePath('/dashboard')
+    revalidatePath('/repositories')
     revalidatePath('/repositories')
     revalidatePath(`/commits/${commitId}`)
 

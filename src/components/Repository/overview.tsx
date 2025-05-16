@@ -19,7 +19,7 @@ import {
   ResponsiveContainer,
   Tooltip
 } from 'recharts'
-import { CommitCard } from '../Dashboard/commit-card'
+import { CommitCard } from '../repositories/commit-card'
 
 interface RepositoryOverviewProps {
   repositoryId: string

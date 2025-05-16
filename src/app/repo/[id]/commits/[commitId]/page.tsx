@@ -1,6 +1,6 @@
 import { getCommitDetails } from '@/app/actions/commits'
-import { CommitDetails } from '@/components/Dashboard/commit-details'
-import { DashboardShell } from '@/components/Dashboard/shell'
+import { CommitDetails } from '@/components/repositories/commit-details'
+import { DashboardShell } from '@/components/repositories/shell'
 
 import { Skeleton } from '@/components/ui/skeleton'
 import { getAuthSession } from '@/lib/auth'
@@ -36,7 +36,7 @@ export default async function CommitPage({
       <Suspense fallback={<CommitDetailsSkeleton />}>
         <CommitDetails commit={commit} />
       </Suspense>
-    </DashboardShell>
+    </repositoriesShell>
   )
 }
 

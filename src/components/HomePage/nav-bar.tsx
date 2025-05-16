@@ -70,7 +70,7 @@ export function NavBar() {
                   asChild
                   className="border border-[#374151] hover:border-[#00e6ff] hover:bg-[#00e6ff10]"
                 >
-                  <Link href="/dashboard">Dashboard</Link>
+                  <Link href="/repositories">Dashboard</Link>
                 </Button>
                 <Button
                   variant="outline"

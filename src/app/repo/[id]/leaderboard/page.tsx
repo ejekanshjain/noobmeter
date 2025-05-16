@@ -1,5 +1,5 @@
 import { getGitConnection } from '@/app/actions/git-connections'
-import { DashboardShell } from '@/components/Dashboard/shell'
+import { DashboardShell } from '@/components/repositories/shell'
 import { Leaderboard } from '@/components/Repository/leaderboard'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getAuthSession } from '@/lib/auth'
@@ -40,7 +40,7 @@ export default async function LeaderboardPage({
       <Suspense fallback={<LeaderboardSkeleton />}>
         <Leaderboard repositoryId={p.id} repository={connection} />
       </Suspense>
-    </DashboardShell>
+    </repositoriesShell>
   )
 }
 
