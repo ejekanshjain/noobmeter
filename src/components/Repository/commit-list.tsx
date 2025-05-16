@@ -78,7 +78,7 @@ export function CommitsList({ repositoryId, repository }: CommitsListProps) {
     } finally {
       setLoading(false)
     }
-  }, [pagination, repositoryId])
+  }, [pagination.limit, pagination.offset, repositoryId])
 
   useEffect(() => {
     loadCommits()
