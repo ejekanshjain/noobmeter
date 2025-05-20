@@ -2,6 +2,7 @@
  * @param input
  * @returns
  */
+
 export function extractRepositoryPath(input: string): string {
   if (input.startsWith('http://') || input.startsWith('https://')) {
     try {
