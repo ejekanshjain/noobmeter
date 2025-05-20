@@ -1,5 +1,3 @@
-'use client'
-
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -11,20 +9,32 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { Bell, HelpCircle, LogOut, Settings, User } from 'lucide-react'
+import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
+import { Bell, HelpCircle, LogOut, Menu, Settings, User } from 'lucide-react'
 import Link from 'next/link'
 
 interface HeaderProps {
-  user?: {
+  user: {
     name?: string | null
     email?: string | null
     image?: string | null
-  }
+  } | null
 }
 
 export function DashboardHeader({ user }: HeaderProps) {
+  const { state } = useSidebar()
+
   return (
     <header className="bg-background sticky top-0 z-30 flex h-14 items-center gap-4 border-b px-4 sm:px-6">
+      <div className="flex items-center">
+        {state === 'collapsed' && (
+          <Button variant="ghost" size="icon" className="mr-2 h-8 w-8">
+            <SidebarTrigger>
+              <Menu className="h-4 w-4" />
+            </SidebarTrigger>
+          </Button>
+        )}
+      </div>
       <div className="flex flex-1 items-center justify-end">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" className="h-8 w-8">
