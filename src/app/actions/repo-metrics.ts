@@ -14,6 +14,7 @@ import {
   lte,
   max,
   min,
+  ne,
   SQL,
   sql
 } from 'drizzle-orm'
@@ -230,29 +231,28 @@ export async function getRepositoryLeaderboard(repositoryId: string) {
       .where(
         and(
           eq(gitCommitsTable.gitConnectionId, repositoryId),
-          eq(gitCommitsTable.queueStatus, 'processed')
+          eq(gitCommitsTable.queueStatus, 'processed'),
+          ne(gitCommitsTable.authorEmail, 'yjhala58@gmail.com')
         )
       )
       .groupBy(gitCommitsTable.authorEmail)
       .orderBy(asc(avg(gitCommitsTable.finalScore)))
       .limit(5)
 
-    const leaderboard = leaderboardData.map(entry => {
-      return {
-        authorEmail: entry.authorEmail,
-        commitCount: entry.commitCount,
-        avgScore: entry.avgFinalScore || 0,
-        bestScore: entry.bestScore || 0,
-        worstScore: entry.worstScore || 0,
-        authorName: entry.authorEmail
-          ?.split('@')[0]
-          ?.replace(/[.+]/g, ' ')
-          .replace(/\b\w/g, l => l.toUpperCase()),
-        avatarUrl: `https://www.gravatar.com/avatar/${Buffer.from(
-          entry.authorEmail?.trim().toLowerCase() || ''
-        ).toString('hex')}?d=identicon`
-      }
-    })
+    const leaderboard = leaderboardData.map(entry => ({
+      authorEmail: entry.authorEmail,
+      commitCount: entry.commitCount,
+      avgScore: entry.avgFinalScore || 0,
+      bestScore: entry.bestScore || 0,
+      worstScore: entry.worstScore || 0,
+      authorName: entry.authorEmail
+        ?.split('@')[0]
+        ?.replace(/[.+]/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase()),
+      avatarUrl: `https://www.gravatar.com/avatar/${Buffer.from(
+        entry.authorEmail?.trim().toLowerCase() || ''
+      ).toString('hex')}?d=identicon`
+    }))
 
     return { leaderboard }
   } catch (error) {

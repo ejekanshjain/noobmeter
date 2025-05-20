@@ -41,17 +41,17 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
     try {
       const result = await getRepositoryLeaderboard(repositoryId)
       if (!result?.error) {
-        const typedLeaderboard: LeaderboardEntry[] = (result?.leaderboard || [])
-          .filter((entry: any) => entry?.authorEmail !== 'yjhala58@gmail.com')
-          .map((entry: any) => ({
-            authorEmail: entry?.authorEmail || '',
-            authorName: entry?.authorName,
-            avatarUrl: entry?.avatarUrl || '',
-            commitCount: Number(entry?.commitCount || 0),
-            avgScore: Number(entry?.avgScore || 0),
-            bestScore: Number(entry?.bestScore || 0),
-            worstScore: Number(entry?.worstScore || 0)
-          }))
+        const typedLeaderboard: LeaderboardEntry[] = (
+          result?.leaderboard || []
+        ).map((entry: any) => ({
+          authorEmail: entry?.authorEmail || '',
+          authorName: entry?.authorName,
+          avatarUrl: entry?.avatarUrl || '',
+          commitCount: Number(entry?.commitCount || 0),
+          avgScore: Number(entry?.avgScore || 0),
+          bestScore: Number(entry?.bestScore || 0),
+          worstScore: Number(entry?.worstScore || 0)
+        }))
         setLeaderboard(typedLeaderboard)
       }
     } catch (err) {
