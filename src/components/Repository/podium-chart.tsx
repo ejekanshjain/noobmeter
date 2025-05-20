@@ -94,24 +94,18 @@ export default function PodiumChart({ data, barColors }: PodiumChartProps) {
     }
   }
 
-  // Generate bug paths that look like they're crawling
   const generateBugPaths = (barHeight: number, barWidth: number) => {
     const paths = []
-    const bugCount = 6 // Reduced number of bugs
+    const bugCount = 2
 
-    // Calculate the center of the bar
     const centerX = 0
-
-    // Calculate spacing to spread bugs across the bar
-    const spreadWidth = barWidth * 0.8 // Use 80% of the bar width for spreading
+    const spreadWidth = barWidth * 0.8
     const step = spreadWidth / (bugCount - 1)
 
     for (let i = 0; i < bugCount; i++) {
-      // Distribute bugs evenly across the bar width
       const startX = centerX - spreadWidth / 2 + i * step
       const startY = barHeight + 10
 
-      // Create a zigzag path with more horizontal spread
       const path = {
         x: [
           startX,
@@ -151,7 +145,7 @@ export default function PodiumChart({ data, barColors }: PodiumChartProps) {
           participant.position
         )
         const noobTitle = getNoobTitle(participant.position, data?.length)
-        const barWidth = 100 // Approximate width of the bar in pixels
+        const barWidth = 100
         const bugPaths = generateBugPaths(barHeight, barWidth)
 
         return (
@@ -198,7 +192,6 @@ export default function PodiumChart({ data, barColors }: PodiumChartProps) {
                   </div>
                 </div>
 
-                {/* Avatar */}
                 <div
                   className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 p-0.5 shadow-lg"
                   style={{
@@ -264,7 +257,6 @@ export default function PodiumChart({ data, barColors }: PodiumChartProps) {
                         </motion.div>
                       </div>
 
-                      {/* Bug Parade - bugs crawling inside the bar */}
                       <div className="absolute inset-0 overflow-hidden">
                         {bugPaths.map((bugPath, i) => (
                           <motion.div
@@ -295,7 +287,6 @@ export default function PodiumChart({ data, barColors }: PodiumChartProps) {
                 </motion.div>
               </div>
 
-              {/* Award icons */}
               <motion.div
                 className="mt-4 flex flex-col items-center justify-center"
                 initial={{ opacity: 0, y: 10 }}
@@ -321,7 +312,6 @@ export default function PodiumChart({ data, barColors }: PodiumChartProps) {
                       <Trophy className="h-12 w-12 text-yellow-400 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] filter" />
                     </motion.div>
 
-                    {/* Ribbon under trophy */}
                     <motion.div
                       className="mt-1"
                       initial={{ opacity: 0, y: -5 }}
@@ -389,7 +379,6 @@ export default function PodiumChart({ data, barColors }: PodiumChartProps) {
                 )}
               </motion.div>
 
-              {/* Name and Title */}
               <motion.div
                 className="mt-2 flex flex-col items-center"
                 initial={{ opacity: 0 }}
