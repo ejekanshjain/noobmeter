@@ -265,7 +265,8 @@ export async function getRepositoryLeaderboard(repositoryId: string) {
         and(
           eq(gitCommitsTable.gitConnectionId, repositoryId),
           eq(gitCommitsTable.queueStatus, 'processed'),
-          ne(gitCommitsTable.authorEmail, 'yjhala58@gmail.com')
+          ne(gitCommitsTable.authorEmail, 'yjhala58@gmail.com'),
+          ne(gitCommitsTable.authorEmail, 'ejekanshjain@gmail.com')
         )
       )
       .groupBy(gitCommitsTable.authorEmail)
