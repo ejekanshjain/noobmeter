@@ -48,17 +48,12 @@ export function RepositoriesList() {
       <div className="flex flex-col gap-6">
         <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <div>
-            <h1 className="text-2xl font-medium text-gray-900 dark:text-gray-100">
-              Repositories
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <h1 className="text-2xl font-medium">Repositories</h1>
+            <p className="text-muted-foreground text-sm">
               Select a repository to view its metrics and commits
             </p>
           </div>
-          <Button
-            className="bg-teal-600 text-white hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600"
-            disabled
-          >
+          <Button disabled variant={'outline'}>
             <Plus className="mr-2 h-4 w-4" />
             Connect Repository
           </Button>
@@ -70,7 +65,7 @@ export function RepositoriesList() {
             .map((_, i) => (
               <div
                 key={i}
-                className="h-40 animate-pulse rounded-lg border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-800/50"
+                className="border-primary/20 bg-card/50 h-40 animate-pulse rounded-lg border backdrop-blur-sm"
               />
             ))}
         </div>
@@ -83,17 +78,12 @@ export function RepositoriesList() {
       <div className="flex flex-col gap-6">
         <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <div>
-            <h1 className="text-2xl font-medium text-gray-900 dark:text-gray-100">
-              Repositories
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <h1 className="text-2xl font-medium">Repositories</h1>
+            <p className="text-muted-foreground text-sm">
               Select a repository to view its metrics and commits
             </p>
           </div>
-          <Button
-            className="bg-teal-600 text-white hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600"
-            asChild
-          >
+          <Button asChild variant={'outline'}>
             <Link href="/repositories/new">
               <Plus className="mr-2 h-4 w-4" />
               Connect Repository
@@ -103,15 +93,11 @@ export function RepositoriesList() {
 
         <Alert
           variant="destructive"
-          className="border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-900/20"
+          className="border-primary/20 bg-card/50 backdrop-blur-sm"
         >
-          <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-          <AlertTitle className="text-red-600 dark:text-red-400">
-            Error
-          </AlertTitle>
-          <AlertDescription className="text-red-600 dark:text-red-400">
-            {error}
-          </AlertDescription>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       </div>
     )
@@ -125,17 +111,12 @@ export function RepositoriesList() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h1 className="text-2xl font-medium text-gray-900 dark:text-gray-100">
-            Repositories
-          </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <h1 className="text-2xl font-medium">Repositories</h1>
+          <p className="text-muted-foreground text-sm">
             Select a repository to view its metrics and commits
           </p>
         </div>
-        <Button
-          className="bg-teal-600 text-white hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600"
-          asChild
-        >
+        <Button asChild variant={'outline'}>
           <Link href="/repositories/new">
             <Plus className="mr-2 h-4 w-4" />
             Connect Repository
@@ -144,10 +125,10 @@ export function RepositoriesList() {
       </div>
 
       <div className="relative">
-        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400 dark:text-gray-500" />
+        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
         <Input
           placeholder="Search repositories..."
-          className="border-gray-200 bg-white pl-10 dark:border-gray-800 dark:bg-gray-900"
+          className="border-primary/20 bg-card/50 pl-10 backdrop-blur-sm"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
         />
@@ -159,8 +140,8 @@ export function RepositoriesList() {
             <RepositoryCard key={repo.id} repository={repo} />
           ))
         ) : (
-          <div className="col-span-3 flex h-40 items-center justify-center rounded-lg border border-dashed border-gray-200 dark:border-gray-800">
-            <p className="text-gray-500 dark:text-gray-400">
+          <div className="border-primary/20 bg-card/30 col-span-3 flex h-40 items-center justify-center rounded-lg border border-dashed backdrop-blur-sm">
+            <p className="text-muted-foreground">
               No repositories found matching your search
             </p>
           </div>

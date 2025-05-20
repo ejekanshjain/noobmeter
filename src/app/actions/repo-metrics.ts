@@ -8,6 +8,7 @@ import {
   asc,
   avg,
   count,
+  countDistinct,
   desc,
   eq,
   gte,
@@ -194,6 +195,38 @@ export async function getRepositoryCommits(
       },
       authors: authors.map(a => a.authorEmail)
     }
+  } catch (error) {
+    console.error('Failed to fetch repository commits:', error)
+    return { error: 'Failed to fetch repository commits' }
+  }
+}
+
+export async function getTotalCommits(repositoryId: string) {
+  const session = await getAuthSession()
+  if (!session?.user) {
+    return { error: 'Unauthorized' }
+  }
+
+  try {
+    const result = await db
+      .select({
+        totalCommits: count(),
+        totalAuthors: countDistinct(gitCommitsTable.authorEmail)
+      })
+      .from(gitCommitsTable)
+      .where(
+        and(
+          eq(gitCommitsTable.gitConnectionId, repositoryId),
+          eq(gitCommitsTable.queueStatus, 'processed')
+        )
+      )
+
+    const { totalCommits, totalAuthors } = result[0] || {
+      totalCommits: 0,
+      totalAuthors: 0
+    }
+
+    return { totalCommits, totalAuthors }
   } catch (error) {
     console.error('Failed to fetch repository commits:', error)
     return { error: 'Failed to fetch repository commits' }

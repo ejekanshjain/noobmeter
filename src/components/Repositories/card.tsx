@@ -1,212 +1,126 @@
 'use client'
-
 import { deleteGitConnection } from '@/app/actions/git-connections'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from '@/components/ui/alert-dialog'
+import { getTotalCommits } from '@/app/actions/repo-metrics'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
-import {
-  ExternalLink,
-  GitBranch,
-  MoreHorizontal,
-  RefreshCw,
-  Settings,
-  Trash2
-} from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ArrowUpRight, GitBranch, Github, Gitlab, Users } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 
-interface RepositoryCardProps {
-  repository: {
-    id: string
-    type: string
-    host: string
-    project: string
-    isActive: boolean
-    webhookSecret: string
-    createdAt: string
-  }
-}
-
-export function RepositoryCard({ repository }: RepositoryCardProps) {
-  const router = useRouter()
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-
-  const handleDelete = async () => {
-    setIsDeleting(true)
-    try {
+export function RepositoryCard({ repository }: { repository: any }) {
+  const [isPending, startTransition] = useTransition()
+  const [data, setData] = useState<{
+    count: number
+    author: number
+  }>({
+    count: 0,
+    author: 0
+  })
+  const handleDisconnect = () => {
+    startTransition(async () => {
       await deleteGitConnection(repository.id)
-      router.refresh()
-    } catch (error) {
-      console.error('Failed to delete repository:', error)
-    } finally {
-      setIsDeleting(false)
-      setShowDeleteDialog(false)
-    }
+    })
   }
+  useEffect(() => {
+    const fetchCommitCount = async () => {
+      try {
+        const res = await getTotalCommits(repository?.id)
+        setData({
+          author: res?.totalAuthors || 0,
+          count: res?.totalCommits || 0
+        })
+      } catch (error) {
+        console.error('Failed to fetch commit count:', error)
+      } finally {
+      }
+    }
 
-  const getHostIcon = (host: string) => {
-    if (host.includes('github')) return 'github'
-    if (host.includes('gitlab')) return 'gitlab'
-    return 'git'
+    fetchCommitCount()
+  }, [repository?.id])
+  const latestCommit = repository.commits?.[0]
+
+  const formatDate = (dateInput: string | Date) => {
+    if (!dateInput) return 'No date'
+    const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
+    return date.toLocaleDateString()
   }
 
   return (
-    <>
-      <Card className="group overflow-hidden border border-gray-200 bg-white transition-all duration-200 hover:border-teal-400 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-teal-500">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-3">
-              <div className="mt-1">
-                <GitBranch className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="max-w-[180px] truncate font-medium text-gray-900 dark:text-gray-100">
-                  {repository.project}
-                </div>
-                <div className="mt-1 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                  <Badge
-                    variant="outline"
-                    className="border-gray-200 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-300"
-                  >
-                    {getHostIcon(repository.host)}
-                  </Badge>
-                  <span className="max-w-[120px] truncate">
-                    {repository.host}
-                  </span>
-                </div>
+    <Card className="border-primary/20 bg-card/50 group hover:border-primary/40 overflow-hidden backdrop-blur-sm transition-all duration-300">
+      <div className="from-primary/5 to-secondary/5 absolute inset-0 rounded-lg bg-gradient-to-br via-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+      <CardHeader className="relative z-10 flex flex-row items-center justify-between space-y-0 pb-2">
+        <div className="flex items-center gap-2">
+          {repository.type === 'github' ? (
+            <Github className="text-primary h-5 w-5" />
+          ) : (
+            <Gitlab className="text-primary h-5 w-5" />
+          )}
+          <CardTitle className="text-lg">{repository.project}</CardTitle>
+        </div>
+        <Badge
+          variant="outline"
+          className="border-primary/20 bg-primary/10 text-xs"
+        >
+          {data?.count} commits
+        </Badge>
+      </CardHeader>
+      <CardContent className="relative z-10">
+        <div className="space-y-4">
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="bg-card/30 border-primary/10 flex items-center gap-2 rounded-md border p-2">
+              <GitBranch className="h-5 w-5 text-cyan-500" />
+              <div className="flex flex-col">
+                <span className="text-xs font-medium">{data?.count}</span>
+                <span className="text-muted-foreground text-xs">Commits</span>
               </div>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
-              >
-                <DropdownMenuItem
-                  asChild
-                  className="text-gray-700 focus:bg-gray-100 dark:text-gray-300 dark:focus:bg-gray-800"
-                >
-                  <Link href={`/repo/${repository.id}/settings`}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => router.refresh()}
-                  className="text-gray-700 focus:bg-gray-100 dark:text-gray-300 dark:focus:bg-gray-800"
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Refresh
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-800" />
-                <DropdownMenuItem
-                  className="text-red-600 focus:bg-red-50 focus:text-red-700 dark:text-red-400 dark:focus:bg-red-900/20 dark:focus:text-red-300"
-                  onClick={() => setShowDeleteDialog(true)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="bg-card/30 border-primary/10 flex items-center gap-2 rounded-md border p-2">
+              <Users className="h-4 w-4 text-cyan-500" />
+              <div className="flex flex-col">
+                <span className="text-xs font-medium">{data?.author}</span>
+                <span className="text-muted-foreground text-xs">Authors</span>
+              </div>
+            </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-between">
-            <Badge
-              variant={repository.isActive ? 'default' : 'secondary'}
-              className={
-                repository.isActive
-                  ? 'bg-teal-100 text-xs text-teal-800 hover:bg-teal-200 dark:bg-teal-900/30 dark:text-teal-400 dark:hover:bg-teal-900/40'
-                  : 'bg-gray-100 text-xs text-gray-800 dark:bg-gray-800 dark:text-gray-400'
-              }
-            >
-              {repository.isActive ? 'Active' : 'Inactive'}
-            </Badge>
+          <div className="text-muted-foreground flex items-center justify-between text-xs">
+            <span>
+              {latestCommit
+                ? `Updated ${formatDate(latestCommit.date)}`
+                : 'No commits yet'}
+            </span>
           </div>
 
-          <Button
-            className="mt-4 w-full bg-teal-600 text-white hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600"
-            asChild
-          >
-            <Link href={`/repo/${repository.id}`}>
-              <ExternalLink className="mr-2 h-4 w-4" />
-              View Repository
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
+          <div className="flex w-full gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gradient-border group flex-1"
+              asChild
+            >
+              <Link href={`/repo/${repository.id}`}>
+                <span className="group-hover:text-gradient transition-all duration-300">
+                  View Details
+                </span>
+                <ArrowUpRight className="ml-2 h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            </Button>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-gray-900 dark:text-gray-100">
-              Are you sure?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600 dark:text-gray-400">
-              This will permanently delete the repository connection for{' '}
-              <strong className="text-gray-900 dark:text-gray-100">
-                {repository.project}
-              </strong>
-              . This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              disabled={isDeleting}
-              className="border-gray-200 bg-gray-100 text-gray-900 hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-destructive/30 hover:bg-destructive/10 flex-1"
+              onClick={handleDisconnect}
+              disabled={isPending}
             >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={e => {
-                e.preventDefault()
-                handleDelete()
-              }}
-              disabled={isDeleting}
-              className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600"
-            >
-              {isDeleting ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </>
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+              <span className="text-destructive">
+                {isPending ? 'Disconnecting...' : 'Disconnect'}
+              </span>
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
