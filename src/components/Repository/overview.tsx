@@ -224,6 +224,13 @@ export function RepositoryOverview({
           icon={<GitCommit className="h-4 w-4" />}
           trend="up"
         />
+        <StatsCard
+          title="Total Authors"
+          value={metrics?.totalAuthors?.toString() || '0'}
+          description="Analyzed commits"
+          icon={<GitCommit className="h-4 w-4" />}
+          trend="up"
+        />
       </div>
 
       <Tabs defaultValue="metrics" className="space-y-4">
@@ -417,7 +424,7 @@ function StatsCard({
     <Card className="border-border border dark:bg-black">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-full">
+        <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-full text-cyan-500">
           {icon}
         </div>
       </CardHeader>

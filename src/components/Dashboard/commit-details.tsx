@@ -138,8 +138,6 @@ export function CommitDetails({ commit }: CommitDetailsProps) {
     )
   }
 
-  // Replace the radarData calculation with this safer version:
-  // Format metrics data for radar chart
   const radarData = [
     { name: 'Correctness', value: commit?.correctness || 0, fullMark: 10 },
     { name: 'Readability', value: commit?.readability || 0, fullMark: 10 },

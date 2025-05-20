@@ -61,19 +61,32 @@ export async function getRepositoryMetrics(repositoryId: string) {
         )
       )
 
-    const metrics = metricsResult[0] ?? {
-      totalCommits: 0,
-      avgCorrectness: 0,
-      avgReadability: 0,
-      avgBestPractices: 0,
-      avgPerformance: 0,
-      avgSecurity: 0,
-      avgDryness: 0,
-      avgScopeDiscipline: 0,
-      avgTestability: 0,
-      avgImpactToNoise: 0,
-      avgWorkComplexity: 0,
-      avgFinalScore: 0
+    const totalAuthorsResult = await db
+      .select({ totalAuthors: countDistinct(gitCommitsTable.authorEmail) })
+      .from(gitCommitsTable)
+      .where(
+        and(
+          eq(gitCommitsTable.gitConnectionId, repositoryId),
+          eq(gitCommitsTable.queueStatus, 'processed')
+        )
+      )
+
+    const totalAuthors = totalAuthorsResult[0]?.totalAuthors || 0
+
+    const metrics = {
+      totalCommits: metricsResult[0]?.totalCommits || 0,
+      avgCorrectness: metricsResult[0]?.avgCorrectness || 0,
+      avgReadability: metricsResult[0]?.avgReadability || 0,
+      avgBestPractices: metricsResult[0]?.avgBestPractices || 0,
+      avgPerformance: metricsResult[0]?.avgPerformance || 0,
+      avgSecurity: metricsResult[0]?.avgSecurity || 0,
+      avgDryness: metricsResult[0]?.avgDryness || 0,
+      avgScopeDiscipline: metricsResult[0]?.avgScopeDiscipline || 0,
+      avgTestability: metricsResult[0]?.avgTestability || 0,
+      avgImpactToNoise: metricsResult[0]?.avgImpactToNoise || 0,
+      avgWorkComplexity: metricsResult[0]?.avgWorkComplexity || 0,
+      avgFinalScore: metricsResult[0]?.avgFinalScore || 0,
+      totalAuthors
     }
 
     const thirtyDaysAgo = new Date()

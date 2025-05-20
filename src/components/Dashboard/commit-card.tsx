@@ -83,7 +83,6 @@ export function CommitCard({ commit }: CommitCardProps) {
     }
   }
 
-  // Get score color
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600 dark:text-green-400'
     if (score >= 60) return 'text-emerald-600 dark:text-emerald-400'
