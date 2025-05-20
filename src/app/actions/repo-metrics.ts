@@ -348,7 +348,7 @@ export async function getPaginatedAuthors({
       .from(gitCommitsTable)
       .where(whereCondition)
       .groupBy(gitCommitsTable.authorEmail)
-      .orderBy(sql`avg(${gitCommitsTable.finalScore}) DESC`)
+      .orderBy(sql`avg(${gitCommitsTable.finalScore}) ASC`)
       .limit(pageSize)
       .offset(offset)
 
