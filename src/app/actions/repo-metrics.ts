@@ -281,7 +281,6 @@ export async function getRepositoryLeaderboard(repositoryId: string) {
       )
       .groupBy(gitCommitsTable.authorEmail)
       .orderBy(asc(avg(gitCommitsTable.finalScore)))
-      .limit(5)
 
     const leaderboard = leaderboardData.map(entry => ({
       authorEmail: entry.authorEmail,
