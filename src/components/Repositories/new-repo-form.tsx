@@ -28,7 +28,6 @@ import {
   TooltipProvider,
   TooltipTrigger
 } from '@/components/ui/tooltip'
-import { getAuthSession } from '@/lib/auth'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   ArrowLeft,
@@ -63,7 +62,6 @@ export const NewRepositoryPage = () => {
   const [success, setSuccess] = useState<boolean>(false)
   const [webhookSecret, setWebhookSecret] = useState<string | null>(null)
 
-  const session = getAuthSession()
   const form = useForm<GitConnectionFormValues>({
     resolver: zodResolver(gitConnectionSchema),
     defaultValues: {
