@@ -131,7 +131,7 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
             </div>
           </Card>
         ) : leaderboard.length > 0 ? (
-          leaderboard.slice(0, 5).map((entry, index) => (
+          leaderboard.map((entry, index) => (
             <Card
               key={entry.authorEmail || `entry-${index}`}
               className="border-border group relative overflow-hidden border transition-all duration-300 hover:shadow-md"
