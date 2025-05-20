@@ -128,7 +128,7 @@ export function CommitCard({ commit }: CommitCardProps) {
                   </div>
                 </div>
                 <Link
-                  href={`/repo/${encodeURIComponent(commit.gitConnection?.project)}/commits/${commit.id}`}
+                  href={`/repo/${encodeURIComponent(commit.gitConnectionId)}/commits/${commit.id}`}
                 >
                   <Button variant="outline" size="sm" className="ml-2">
                     <ExternalLink className="mr-1 h-4 w-4" />

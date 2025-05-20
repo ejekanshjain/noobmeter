@@ -15,7 +15,6 @@ import {
   lte,
   max,
   min,
-  ne,
   SQL,
   sql
 } from 'drizzle-orm'
@@ -264,9 +263,7 @@ export async function getRepositoryLeaderboard(repositoryId: string) {
       .where(
         and(
           eq(gitCommitsTable.gitConnectionId, repositoryId),
-          eq(gitCommitsTable.queueStatus, 'processed'),
-          ne(gitCommitsTable.authorEmail, 'yjhala58@gmail.com'),
-          ne(gitCommitsTable.authorEmail, 'ejekanshjain@gmail.com')
+          eq(gitCommitsTable.queueStatus, 'processed')
         )
       )
       .groupBy(gitCommitsTable.authorEmail)
