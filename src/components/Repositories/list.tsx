@@ -53,10 +53,12 @@ export function RepositoriesList() {
               Select a repository to view its metrics and commits
             </p>
           </div>
-          <Button disabled variant={'outline'}>
-            <Plus className="mr-2 h-4 w-4" />
-            Connect Repository
-          </Button>
+          <Link href="/repositories/new">
+            <Button disabled variant={'outline'}>
+              <Plus className="mr-2 h-4 w-4" />
+              Connect Repository
+            </Button>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
