@@ -26,7 +26,7 @@ interface LeaderboardEntry {
   authorName?: string
   avatarUrl?: string
   commitCount: number
-  avgScore: number // This must be a number
+  avgScore: number
   bestScore: number
   worstScore: number
 }
@@ -41,18 +41,17 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
     try {
       const result = await getRepositoryLeaderboard(repositoryId)
       if (!result?.error) {
-        // Ensure all numeric values are properly converted to numbers
-        const typedLeaderboard: LeaderboardEntry[] = (
-          result?.leaderboard || []
-        ).map((entry: any) => ({
-          authorEmail: entry?.authorEmail || '',
-          authorName: entry?.authorName,
-          avatarUrl: entry?.avatarUrl || '',
-          commitCount: Number(entry?.commitCount || 0),
-          avgScore: Number(entry?.avgScore || 0), // Ensure this is a number
-          bestScore: Number(entry?.bestScore || 0),
-          worstScore: Number(entry?.worstScore || 0)
-        }))
+        const typedLeaderboard: LeaderboardEntry[] = (result?.leaderboard || [])
+          .filter((entry: any) => entry?.authorEmail !== 'yjhala58@gmail.com')
+          .map((entry: any) => ({
+            authorEmail: entry?.authorEmail || '',
+            authorName: entry?.authorName,
+            avatarUrl: entry?.avatarUrl || '',
+            commitCount: Number(entry?.commitCount || 0),
+            avgScore: Number(entry?.avgScore || 0),
+            bestScore: Number(entry?.bestScore || 0),
+            worstScore: Number(entry?.worstScore || 0)
+          }))
         setLeaderboard(typedLeaderboard)
       }
     } catch (err) {
@@ -75,7 +74,6 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
     }
   }
 
-  // Get initials from email
   const getInitials = (email: string) => {
     return email?.split('@')[0]?.substring(0, 2)?.toUpperCase() || '??'
   }
@@ -106,7 +104,6 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
         </Button>
       </div>
 
-      {/* Animated Podium Chart */}
       {leaderboard.length > 0 && (
         <Card className="border-border overflow-hidden border shadow-sm">
           <CardHeader className="border-border bg-muted/20 border-b pb-2">
@@ -126,7 +123,6 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
         </Card>
       )}
 
-      {/* Leaderboard Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {loading ? (
           <Card className="border-border col-span-full border p-6 shadow-sm">
