@@ -12,9 +12,11 @@ import {
   desc,
   eq,
   gte,
+  like,
   lte,
   max,
   min,
+  or,
   SQL,
   sql
 } from 'drizzle-orm'
@@ -302,5 +304,68 @@ export async function getRepositoryLeaderboard(repositoryId: string) {
   } catch (error) {
     console.error('Failed to fetch repository leaderboard:', error)
     return { error: 'Failed to fetch repository leaderboard' }
+  }
+}
+
+export async function getPaginatedAuthors({
+  repositoryId,
+  page = 1,
+  pageSize = 10,
+  search = ''
+}: {
+  repositoryId: string
+  page?: number
+  pageSize?: number
+  search?: string
+}) {
+  const session = await getAuthSession()
+  if (!session?.user) {
+    return { error: 'Unauthorized' }
+  }
+
+  try {
+    const offset = (page - 1) * pageSize
+
+    const searchCondition = search
+      ? or(like(gitCommitsTable.authorEmail, `%${search}%`))
+      : undefined
+
+    const whereCondition = searchCondition
+      ? and(
+          eq(gitCommitsTable.gitConnectionId, repositoryId),
+          eq(gitCommitsTable.queueStatus, 'processed'),
+          searchCondition
+        )
+      : and(
+          eq(gitCommitsTable.gitConnectionId, repositoryId),
+          eq(gitCommitsTable.queueStatus, 'processed')
+        )
+
+    const authors = await db
+      .select({
+        authorEmail: gitCommitsTable.authorEmail,
+        avgScore: sql<number>`avg(${gitCommitsTable.finalScore})`
+      })
+      .from(gitCommitsTable)
+      .where(whereCondition)
+      .groupBy(gitCommitsTable.authorEmail)
+      .orderBy(sql`avg(${gitCommitsTable.finalScore}) DESC`)
+      .limit(pageSize)
+      .offset(offset)
+
+    const totalAuthorsRes = await db
+      .select({
+        total: sql<number>`count(distinct ${gitCommitsTable.authorEmail})`
+      })
+      .from(gitCommitsTable)
+      .where(whereCondition)
+
+    return {
+      authors,
+      totalAuthors: totalAuthorsRes[0]?.total || 0
+    }
+  } catch (error) {
+    console.error('Failed to fetch paginated authors:', error)
+    return { error: 'Failed to fetch authors' }
   }
 }
