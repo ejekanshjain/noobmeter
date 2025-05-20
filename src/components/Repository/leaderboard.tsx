@@ -296,6 +296,7 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
                           src={
                             getDiceBearAvatar(entry.authorEmail, index) ||
                             '/placeholder.svg' ||
+                            '/placeholder.svg' ||
                             '/placeholder.svg'
                           }
                         />
@@ -673,10 +674,32 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
               {/* Pagination controls */}
               {totalPages > 0 && (
                 <div className="flex items-center justify-between border-t px-4 py-4">
-                  <div className="text-muted-foreground text-sm">
-                    Showing{' '}
-                    <span className="font-medium">{authors.length}</span> of{' '}
-                    <span className="font-medium">{totalAuthors}</span> authors
+                  <div className="flex items-center gap-4">
+                    <div className="text-muted-foreground text-sm">
+                      Showing{' '}
+                      <span className="font-medium">{authors.length}</span> of{' '}
+                      <span className="font-medium">{totalAuthors}</span>{' '}
+                      authors
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground text-sm">
+                        Show:
+                      </span>
+                      <select
+                        className="bg-background border-input rounded-md border px-2 py-1 text-sm"
+                        value={pageSize}
+                        onChange={e => {
+                          setPageSize(Number(e.target.value))
+                          setCurrentPage(1)
+                        }}
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2">
