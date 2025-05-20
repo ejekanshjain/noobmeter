@@ -241,7 +241,6 @@ export function CommitDetails({ commit }: CommitDetailsProps) {
               <GitBranch className="mr-1 h-4 w-4" />
               View on {commit.gitConnection.type}
             </Button>
-            rrrrrrrrrr
           </Link>
         </div>
       </div>

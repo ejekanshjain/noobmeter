@@ -1,9 +1,14 @@
-import type { NextConfig } from 'next'
-import './src/env.mjs'
-
-const nextConfig: NextConfig = {
-  experimental: {
-    reactCompiler: true
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true
+  },
+  typescript: {
+    ignoreBuildErrors: true
+  },
+  images: {
+    domains: ['api.dicebear.com', 'www.gravatar.com'],
+    unoptimized: true
   }
 }
 

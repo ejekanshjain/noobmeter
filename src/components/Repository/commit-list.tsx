@@ -2,17 +2,14 @@
 
 import { getRepositoryCommits } from '@/app/actions/repo-metrics'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { DatePicker } from '@/components/ui/date-picker'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import {
   Pagination,
@@ -29,9 +26,17 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Filter, GitBranch, GitCommit, RefreshCw, Search } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import {
+  Calendar,
+  GitBranch,
+  GitCommit,
+  RefreshCw,
+  Search,
+  User,
+  X
+} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
 import { CommitCard } from '../Dashboard/commit-card'
 
 interface CommitsListProps {
@@ -39,13 +44,16 @@ interface CommitsListProps {
   repository: any
 }
 
+interface FilterFormValues {
+  searchQuery: string
+  authorFilter: string
+  dateFilter: Date | undefined
+}
+
 export function CommitsList({ repositoryId, repository }: CommitsListProps) {
   const [commits, setCommits] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [authorFilter, setAuthorFilter] = useState('')
-  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined)
   const [pagination, setPagination] = useState({
     total: 0,
     limit: 10,
@@ -53,94 +61,152 @@ export function CommitsList({ repositoryId, repository }: CommitsListProps) {
   })
   const [authors, setAuthors] = useState<string[]>([])
 
+  // Set up React Hook Form
+  const form = useForm<FilterFormValues>({
+    defaultValues: {
+      searchQuery: '',
+      authorFilter: '',
+      dateFilter: undefined
+    }
+  })
+
+  // Get current form values
+  const { searchQuery, authorFilter, dateFilter } = form.watch()
+
+  // Memoize the current page and total pages calculations
+  const { currentPage, totalPages } = useMemo(() => {
+    return {
+      currentPage: Math.floor(pagination.offset / pagination.limit) + 1,
+      totalPages: Math.ceil(pagination.total / pagination.limit)
+    }
+  }, [pagination.offset, pagination.limit, pagination.total])
+
+  // Debounce search query
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Define loadCommits with useCallback to prevent re-renders
   const loadCommits = useCallback(async () => {
     setLoading(true)
     try {
+      const filters = {
+        searchQuery: debouncedSearchQuery,
+        authorFilter: authorFilter === 'all' ? '' : authorFilter,
+        dateFilter: dateFilter ? dateFilter.toISOString().split('T')[0] : ''
+      }
+
       const result = await getRepositoryCommits(
         repositoryId,
         pagination.limit,
-        pagination.offset
+        pagination.offset,
+        filters
       )
+
       if (!result.error) {
         setCommits(result.commits || [])
         setPagination(prev => ({
           ...prev,
-          total: Number(prev.total)
+          total: result.pagination?.total || prev.total
         }))
 
-        const uniqueAuthors = Array.from(
-          new Set(result.commits?.map((commit: any) => commit.authorEmail))
-        )
-        setAuthors(uniqueAuthors)
+        if (result.authors) {
+          setAuthors(result.authors)
+        }
       }
     } catch (err) {
       console.error('Failed to load commits:', err)
     } finally {
       setLoading(false)
     }
-  }, [pagination.limit, pagination.offset, repositoryId])
+  }, [
+    repositoryId,
+    pagination.limit,
+    pagination.offset,
+    debouncedSearchQuery,
+    authorFilter,
+    dateFilter
+  ])
 
+  // Load commits when filters or pagination changes
   useEffect(() => {
-    loadCommits()
-  }, [repositoryId, pagination.offset, loadCommits])
+    if (repositoryId) {
+      loadCommits()
+    }
+  }, [loadCommits, repositoryId])
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(() => {
     setRefreshing(true)
-    try {
-      await loadCommits()
-    } finally {
-      setRefreshing(false)
-    }
-  }
+    loadCommits().finally(() => setRefreshing(false))
+  }, [loadCommits])
 
-  const handlePrevPage = () => {
+  const handlePrevPage = useCallback(() => {
     if (pagination.offset - pagination.limit >= 0) {
-      setPagination({
-        ...pagination,
-        offset: pagination.offset - pagination.limit
-      })
+      setPagination(prev => ({
+        ...prev,
+        offset: prev.offset - prev.limit
+      }))
     }
-  }
+  }, [pagination.limit, pagination.offset])
 
-  const handleNextPage = () => {
+  const handleNextPage = useCallback(() => {
     if (pagination.offset + pagination.limit < pagination.total) {
-      setPagination({
-        ...pagination,
-        offset: pagination.offset + pagination.limit
-      })
+      setPagination(prev => ({
+        ...prev,
+        offset: prev.offset + prev.limit
+      }))
     }
-  }
+  }, [pagination.limit, pagination.offset, pagination.total])
 
-  const totalPages = Math.ceil(pagination.total / pagination.limit)
-  const currentPage = Math.floor(pagination.offset / pagination.limit) + 1
+  const clearFilters = useCallback(() => {
+    form.reset({
+      searchQuery: '',
+      authorFilter: '',
+      dateFilter: undefined
+    })
 
-  const filteredCommits = commits.filter(commit => {
-    const matchesSearch =
-      commit.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      commit.sha.toLowerCase().includes(searchQuery.toLowerCase())
+    // Reset to first page when clearing filters
+    setPagination(prev => ({
+      ...prev,
+      offset: 0
+    }))
+  }, [form])
 
-    const matchesAuthor = !authorFilter || commit.authorEmail === authorFilter
-
-    const matchesDate =
-      !dateFilter ||
-      new Date(commit.date).toDateString() === dateFilter.toDateString()
-
-    return matchesSearch && matchesAuthor && matchesDate
-  })
-
-  const hasActiveFilters = searchQuery || authorFilter || dateFilter
+  // Memoize the filtered commits to prevent unnecessary re-renders
+  const memoizedCommits = useMemo(() => {
+    return commits.map(commit => ({
+      ...commit,
+      metrics: {
+        correctness: commit.correctness || 0,
+        readability: commit.readability || 0,
+        bestPractices: commit.bestPractices || 0,
+        performance: commit.performance || 0,
+        security: commit.security || 0,
+        dryness: commit.dryness || 0,
+        scopeDiscipline: commit.scopeDiscipline || 0,
+        testability: commit.testability || 0,
+        impactToNoise: commit.impactToNoise || 0,
+        workComplexity: commit.workComplexity || 0,
+        finalScore: commit.finalScore || 0
+      },
+      date: commit.date
+    }))
+  }, [commits])
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div>
           <div className="flex items-center gap-2">
-            <GitBranch className="h-4 w-4 text-slate-400" />
-            <h1 className="text-xl font-medium text-slate-900 dark:text-slate-100">
-              {repository.project}
-            </h1>
+            <GitBranch className="h-5 w-5 text-teal-500 dark:text-teal-400" />
+            <h1 className="text-2xl font-medium">{repository.project}</h1>
           </div>
-          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-muted-foreground text-sm">
             Commit history and analysis
           </p>
         </div>
@@ -149,80 +215,81 @@ export function CommitsList({ repositoryId, repository }: CommitsListProps) {
           size="sm"
           onClick={handleRefresh}
           disabled={refreshing}
-          className="h-8 gap-1.5 rounded-md px-2 text-xs"
         >
           <RefreshCw
-            className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`}
+            className={`mr-1 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`}
           />
           Refresh
         </Button>
       </div>
 
-      <Card className="overflow-hidden border-slate-200 dark:border-slate-800">
-        <CardHeader className="border-b border-slate-100 p-4 dark:border-slate-800">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-base font-medium text-slate-900 dark:text-slate-100">
-                <GitCommit className="h-4 w-4 text-slate-400" />
-                Commits
-              </CardTitle>
-              <p className="mt-0.5 text-xs text-slate-500">
+      <Card className="border-border border dark:bg-black">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <GitCommit className="h-5 w-5" />
+            Commits
+          </CardTitle>
+          <CardDescription>
+            {pagination.total > 0 ? (
+              <>
                 Showing {pagination.offset + 1}-
                 {Math.min(
                   pagination.offset + pagination.limit,
                   pagination.total
                 )}{' '}
                 of {pagination.total} commits
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <div className="relative min-w-[180px] flex-1">
-                <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-                <Input
-                  placeholder="Search commits..."
-                  className="h-8 border-slate-200 pl-8 text-xs dark:border-slate-700"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
+              </>
+            ) : (
+              'No commits found'
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="mb-6">
+            <div className="flex flex-col gap-4 md:flex-row">
+              <div className="relative flex-1">
+                <Controller
+                  control={form.control}
+                  name="searchQuery"
+                  render={({ field }) => (
+                    <div className="relative">
+                      <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
+                      <Input
+                        placeholder="Search commits..."
+                        className="pl-10"
+                        {...field}
+                      />
+                      {field.value && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2 transform p-0"
+                          onClick={() => form.setValue('searchQuery', '')}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 />
               </div>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className={`h-8 w-8 border-slate-200 dark:border-slate-700 ${
-                      hasActiveFilters
-                        ? 'border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-slate-800'
-                        : ''
-                    }`}
-                  >
-                    <Filter
-                      className={`h-3.5 w-3.5 ${
-                        hasActiveFilters
-                          ? 'text-slate-900 dark:text-slate-100'
-                          : 'text-slate-500'
-                      }`}
-                    />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56">
-                  <DropdownMenuLabel className="text-xs font-medium">
-                    Filter Commits
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem className="flex flex-col items-start p-2">
-                      <span className="mb-1 text-xs font-medium text-slate-500">
-                        Author
-                      </span>
+              <div className="flex gap-2">
+                <div className="w-48">
+                  <Controller
+                    control={form.control}
+                    name="authorFilter"
+                    render={({ field }) => (
                       <Select
-                        value={authorFilter}
-                        onValueChange={setAuthorFilter}
+                        value={field.value}
+                        onValueChange={field.onChange}
                       >
-                        <SelectTrigger className="h-8 w-full border-slate-200 text-xs dark:border-slate-700">
-                          <SelectValue placeholder="All authors" />
+                        <SelectTrigger className="w-full">
+                          <div className="flex items-center gap-2">
+                            <User className="text-muted-foreground h-4 w-4" />
+                            <SelectValue placeholder="Filter by author" />
+                          </div>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All authors</SelectItem>
@@ -233,89 +300,53 @@ export function CommitsList({ repositoryId, repository }: CommitsListProps) {
                           ))}
                         </SelectContent>
                       </Select>
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem className="flex flex-col items-start p-2">
-                      <span className="mb-1 text-xs font-medium text-slate-500">
-                        Date
-                      </span>
-                      <DatePicker
-                        date={dateFilter}
-                        setDate={setDateFilter}
-                        placeholder="Filter by date"
-                      />
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-
-                  <DropdownMenuSeparator />
-
-                  {hasActiveFilters && (
-                    <DropdownMenuItem
-                      className="justify-center text-xs text-rose-500 focus:text-rose-600"
-                      onClick={() => {
-                        setSearchQuery('')
-                        setAuthorFilter('')
-                        setDateFilter(undefined)
-                      }}
-                    >
-                      Clear all filters
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="space-y-3 p-4">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))}
-            </div>
-          ) : filteredCommits.length > 0 ? (
-            <div className="">
-              {filteredCommits.map(commit => (
-                <div key={commit.id} className="p-3">
-                  <CommitCard
-                    commit={{
-                      ...commit,
-                      metrics: {
-                        correctness: commit.correctness || 0,
-                        readability: commit.readability || 0,
-                        bestPractices: commit.bestPractices || 0,
-                        performance: commit.performance || 0,
-                        security: commit.security || 0,
-                        dryness: commit.dryness || 0,
-                        scopeDiscipline: commit.scopeDiscipline || 0,
-                        testability: commit.testability || 0,
-                        impactToNoise: commit.impactToNoise || 0,
-                        workComplexity: commit.workComplexity || 0,
-                        finalScore: commit.finalScore || 0
-                      },
-                      date: commit.date
-                    }}
+                    )}
                   />
                 </div>
+
+                <div className="w-48">
+                  <Controller
+                    control={form.control}
+                    name="dateFilter"
+                    render={({ field }) => (
+                      <DatePicker
+                        date={field.value}
+                        setDate={field.onChange}
+                        placeholder="Filter by date"
+                        icon={
+                          <Calendar className="text-muted-foreground h-4 w-4" />
+                        }
+                      />
+                    )}
+                  />
+                </div>
+
+                {(searchQuery || authorFilter || dateFilter) && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    Clear filters
+                  </Button>
+                )}
+              </div>
+            </div>
+          </form>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw className="text-muted-foreground h-8 w-8 animate-spin" />
+            </div>
+          ) : memoizedCommits.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4">
+              {memoizedCommits.map(commit => (
+                <CommitCard key={commit.id} commit={commit} />
               ))}
             </div>
           ) : (
-            <div className="flex h-32 flex-col items-center justify-center gap-3 border-t border-slate-100 dark:border-slate-800">
-              <p className="text-sm text-slate-500">
+            <div className="flex h-40 flex-col items-center justify-center gap-4 rounded-lg border border-dashed">
+              <p className="text-muted-foreground">
                 No commits found matching your filters
               </p>
-              {hasActiveFilters && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSearchQuery('')
-                    setAuthorFilter('')
-                    setDateFilter(undefined)
-                  }}
-                  className="h-7 text-xs"
-                >
+              {(searchQuery || authorFilter || dateFilter) && (
+                <Button variant="outline" size="sm" onClick={clearFilters}>
                   Clear filters
                 </Button>
               )}
@@ -323,8 +354,8 @@ export function CommitsList({ repositoryId, repository }: CommitsListProps) {
           )}
 
           {pagination.total > pagination.limit &&
-            filteredCommits.length > 0 && (
-              <div className="border-t border-slate-100 p-3 dark:border-slate-800">
+            memoizedCommits.length > 0 && (
+              <div className="mt-6 flex justify-center">
                 <Pagination>
                   <PaginationContent>
                     <PaginationItem>
@@ -354,12 +385,11 @@ export function CommitsList({ repositoryId, repository }: CommitsListProps) {
                           <PaginationLink
                             isActive={currentPage === pageToShow}
                             onClick={() => {
-                              setPagination({
-                                ...pagination,
-                                offset: (pageToShow - 1) * pagination.limit
-                              })
+                              setPagination(prev => ({
+                                ...prev,
+                                offset: (pageToShow - 1) * prev.limit
+                              }))
                             }}
-                            className="h-8 w-8 text-xs"
                           >
                             {pageToShow}
                           </PaginationLink>
