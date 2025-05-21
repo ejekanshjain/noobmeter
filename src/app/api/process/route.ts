@@ -24,7 +24,8 @@ const processInternal = async (toProcess: { id: string }[]) => {
               type: true,
               host: true,
               project: true,
-              token: true
+              token: true,
+              customPrompt: true
             }
           }
         }
