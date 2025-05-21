@@ -144,6 +144,7 @@ export const gitConnectionsTable = pgTable(
     isActive: commonFieldDefs.isActive,
     webhookSecret: text('webhook_secret').notNull(),
     token: text('token').notNull(),
+    customPrompt: text('custom_prompt'),
     ...commonFieldDefs.dates
   },
   table => [index().on(table.type, table.host, table.project, table.isActive)]

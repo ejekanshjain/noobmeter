@@ -44,13 +44,15 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
+import { Textarea } from '../ui/textarea'
 
 // Define the form schema
 const gitConnectionSchema = z.object({
   type: z.enum(['github', 'gitlab']),
   host: z.string().optional(),
   project: z.string().min(1, 'Repository path is required'),
-  token: z.string().min(1, 'Access token is required')
+  token: z.string().min(1, 'Access token is required'),
+  customPrompt: z.string().optional()
 })
 
 type GitConnectionFormValues = z.infer<typeof gitConnectionSchema>
@@ -278,6 +280,26 @@ export const NewRepositoryPage = () => {
                               </FormItem>
                             )}
                           />
+
+                          <FormField
+                            control={form.control}
+                            name="customPrompt"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="flex items-center gap-2">
+                                  <Key className="text-muted-foreground h-4 w-4" />
+                                  Custom Prompt (Optional)
+                                </FormLabel>
+                                <FormControl>
+                                  <Textarea {...field} />
+                                </FormControl>
+                                <FormDescription>
+                                  Optional custom instructions for the AI
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         </div>
                       </TabsContent>
 
@@ -360,6 +382,26 @@ export const NewRepositoryPage = () => {
                                 <FormDescription>
                                   Personal access token with api and
                                   read_repository scopes
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="customPrompt"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="flex items-center gap-2">
+                                  <Key className="text-muted-foreground h-4 w-4" />
+                                  Custom Prompt (Optional)
+                                </FormLabel>
+                                <FormControl>
+                                  <Textarea {...field} />
+                                </FormControl>
+                                <FormDescription>
+                                  Optional custom instructions for the AI
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>

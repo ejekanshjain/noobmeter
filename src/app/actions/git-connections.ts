@@ -13,7 +13,8 @@ const gitConnectionSchema = z.object({
   type: z.enum(['github', 'gitlab']),
   host: z.string().url('Please enter a valid URL').or(z.literal('')),
   project: z.string().min(1, 'Project name is required'),
-  token: z.string().min(1, 'Access token is required')
+  token: z.string().min(1, 'Access token is required'),
+  customPrompt: z.string().optional().nullable()
 })
 async function validateGitToken(token: string, type: string, project: string) {
   if (type === 'github') {
@@ -121,6 +122,7 @@ export async function addGitConnection(values: GitConnectionFormValues) {
         token: validatedData.token,
         webhookSecret,
         isActive: true,
+        customPrompt: validatedData.customPrompt,
         userId: session.user.id
       })
       .returning()
