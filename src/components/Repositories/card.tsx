@@ -4,12 +4,21 @@ import { getTotalCommits } from '@/app/actions/repo-metrics'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowUpRight, GitBranch, Github, Gitlab, Users } from 'lucide-react'
+import {
+  ArrowUpRight,
+  Calendar,
+  GitBranch,
+  Github,
+  Gitlab,
+  Loader2,
+  Users
+} from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState, useTransition } from 'react'
 
 export function RepositoryCard({ repository }: { repository: any }) {
   const [isPending, startTransition] = useTransition()
+  const [isLoading, setIsLoading] = useState(true)
   const [data, setData] = useState<{
     count: number
     author: number
@@ -24,6 +33,7 @@ export function RepositoryCard({ repository }: { repository: any }) {
   }
   useEffect(() => {
     const fetchCommitCount = async () => {
+      setIsLoading(true)
       try {
         const res = await getTotalCommits(repository?.id)
         setData({
@@ -33,11 +43,13 @@ export function RepositoryCard({ repository }: { repository: any }) {
       } catch (error) {
         console.error('Failed to fetch commit count:', error)
       } finally {
+        setIsLoading(false)
       }
     }
 
     fetchCommitCount()
   }, [repository?.id])
+
   const latestCommit = repository.commits?.[0]
 
   const formatDate = (dateInput: string | Date) => {
@@ -51,13 +63,22 @@ export function RepositoryCard({ repository }: { repository: any }) {
       <div className="from-primary/5 to-secondary/5 absolute inset-0 rounded-lg bg-gradient-to-br via-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
       <CardHeader className="relative z-10 flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-2">
-          {repository.type === 'github' ? (
-            <Github className="text-primary h-5 w-5" />
-          ) : (
-            <Gitlab className="text-primary h-5 w-5" />
-          )}
+          <div
+            className={`rounded-full p-1 ${
+              repository.type === 'github'
+                ? 'bg-[#2ea44f]/10 text-[#2ea44f]'
+                : 'bg-amber-500/10 text-amber-500'
+            }`}
+          >
+            {repository.type === 'github' ? (
+              <Github className="h-4 w-4" />
+            ) : (
+              <Gitlab className="h-4 w-4" />
+            )}
+          </div>
           <CardTitle className="text-lg">{repository.project}</CardTitle>
         </div>
+
         <Badge
           variant="outline"
           className="border-primary/20 bg-primary/10 text-xs"
@@ -67,31 +88,48 @@ export function RepositoryCard({ repository }: { repository: any }) {
       </CardHeader>
       <CardContent className="relative z-10">
         <div className="space-y-4">
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <div className="bg-card/30 border-primary/10 flex items-center gap-2 rounded-md border p-2">
-              <GitBranch className="h-5 w-5 text-cyan-500" />
-              <div className="flex flex-col">
-                <span className="text-xs font-medium">{data?.count}</span>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-card/50 flex flex-col rounded-lg border p-3">
+              <div className="flex items-center gap-2">
+                <GitBranch className="h-4 w-4 text-cyan-500" />
                 <span className="text-muted-foreground text-xs">Commits</span>
               </div>
+              <div className="mt-1 text-lg font-semibold">
+                {isLoading ? (
+                  <div className="flex h-6 items-center">
+                    <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                  </div>
+                ) : (
+                  data.count.toLocaleString()
+                )}
+              </div>
             </div>
-            <div className="bg-card/30 border-primary/10 flex items-center gap-2 rounded-md border p-2">
-              <Users className="h-4 w-4 text-cyan-500" />
-              <div className="flex flex-col">
-                <span className="text-xs font-medium">{data?.author}</span>
-                <span className="text-muted-foreground text-xs">Authors</span>
+
+            <div className="bg-card/50 flex flex-col rounded-lg border p-3">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-cyan-500" />
+                <span className="text-muted-foreground text-xs">
+                  Contributors
+                </span>
+              </div>
+              <div className="mt-1 text-lg font-semibold">
+                {isLoading ? (
+                  <div className="flex h-6 items-center">
+                    <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                  </div>
+                ) : (
+                  data.author.toLocaleString()
+                )}
               </div>
             </div>
           </div>
 
-          <div className="text-muted-foreground flex items-center justify-between text-xs">
-            <span>
-              {latestCommit
-                ? `Updated ${formatDate(latestCommit.date)}`
-                : 'No commits yet'}
-            </span>
-          </div>
-
+          {latestCommit && (
+            <div className="text-muted-foreground mt-3 flex items-center gap-1.5 text-xs">
+              <Calendar className="h-3.5 w-3.5" />
+              <span>Last updated: {formatDate(latestCommit.date)}</span>
+            </div>
+          )}
           <div className="flex w-full gap-2">
             <Button
               variant="outline"
