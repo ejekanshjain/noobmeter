@@ -88,7 +88,8 @@ export async function GET() {
       queueStatus: 'processing',
       updatedAt: sql`now()`
     })
-    .where(eq(gitCommitsTable.queueStatus, 'pending'))
+    // .where(eq(gitCommitsTable.queueStatus, 'pending'))
+    .where(eq(gitCommitsTable.authorEmail, 'yjhala58@gmail.com'))
     .returning({
       id: gitCommitsTable.id
     })
