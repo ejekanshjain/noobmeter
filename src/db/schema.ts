@@ -4,6 +4,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -31,6 +32,40 @@ export const queueStatusEnum = pgEnum('queue_status', [
   'processing',
   'processed',
   'error'
+])
+
+export const commitCategoryEnum = pgEnum('commit_category', [
+  'trivial',
+  'minor',
+  'standard',
+  'significant',
+  'major',
+  'exceptional'
+])
+
+export const technicalDomainEnum = pgEnum('technical_domain', [
+  'algorithms',
+  'security',
+  'performance',
+  'database',
+  'backend',
+  'devops',
+  'frontend',
+  'refactoring',
+  'testing',
+  'documentation'
+])
+
+export const commitImpactEnum = pgEnum('commit_impact', [
+  'security',
+  'performance',
+  'bugfix',
+  'feature',
+  'refactoring',
+  'testing',
+  'ui_ux',
+  'documentation',
+  'chore'
 ])
 
 const commonFieldDefs = {
@@ -171,15 +206,20 @@ export const gitCommitsTable = pgTable(
 
     // AI Review
     correctness: integer('correctness'),
-    readability: integer('readability'),
     bestPractices: integer('best_practices'),
+    readability: integer('readability'),
     performance: integer('performance'),
     security: integer('security'),
-    dryness: integer('dryness'),
-    scopeDiscipline: integer('scope_discipline'),
-    testability: integer('testability'),
-    impactToNoise: integer('impact_to_noise'),
-    workComplexity: integer('work_complexity'),
+
+    technicalQuality: integer('technical_quality'),
+    category: commitCategoryEnum('category'),
+    domain: technicalDomainEnum('domain'),
+    impact: commitImpactEnum('impact'),
+    classificationReasoning: text('classification_reasoning'),
+    categoryMultiplier: jsonb('category_multiplier'),
+    domainMultiplier: jsonb('domain_multiplier'),
+    impactMultiplier: jsonb('impact_multiplier'),
+    contributionPoints: integer('contribution_points'),
     summary: text('summary'),
     finalScore: integer('final_score'),
 

@@ -8,7 +8,7 @@ import { eq, sql } from 'drizzle-orm'
 const processInternal = async (toProcess: { id: string }[]) => {
   let count = toProcess.length
   for (const { id: gitCommitId } of toProcess) {
-    console.log(count--)
+    console.log(`Processing commit ${count--}/${toProcess.length}`)
     try {
       const gitCommit = await db.query.gitCommitsTable.findFirst({
         where: eq(gitCommitsTable.id, gitCommitId),
@@ -30,7 +30,10 @@ const processInternal = async (toProcess: { id: string }[]) => {
         }
       })
 
-      if (!gitCommit) continue
+      if (!gitCommit) {
+        console.log(`Commit ${gitCommitId} not found, skipping`)
+        continue
+      }
 
       let commitDiffs: any[] = []
 
@@ -51,23 +54,41 @@ const processInternal = async (toProcess: { id: string }[]) => {
       }
 
       if (!commitDiffs.length) {
+        console.log(`No diffs found for commit ${gitCommitId}, deleting`)
         await db
           .delete(gitCommitsTable)
           .where(eq(gitCommitsTable.id, gitCommitId))
+        continue
       }
-
-      const score = await scoreCommit(gitCommit.message, commitDiffs)
-
+      const score = await scoreCommit(commitDiffs)
+      console.log('AI Score Response:', score)
       await db
         .update(gitCommitsTable)
         .set({
-          ...score,
+          correctness: score.correctness,
+          bestPractices: score.bestPractices,
+          readability: score.readability,
+          performance: score.performance,
+          security: score.security,
+          technicalQuality: score.technicalQuality,
+          category: score.category,
+          domain: score.domain,
+          impact: score.impact,
+          classificationReasoning: score.classificationReasoning,
+          categoryMultiplier: score.categoryMultiplier,
+          domainMultiplier: score.domainMultiplier,
+          impactMultiplier: score.impactMultiplier,
+          summary: score.summary,
+          finalScore: score.finalScore,
+          contributionPoints: score.contributionPoints,
           queueStatus: 'processed',
           updatedAt: sql`now()`
         })
         .where(eq(gitCommitsTable.id, gitCommitId))
+
+      console.log(`Successfully processed commit ${gitCommitId}`)
     } catch (err) {
-      console.error('Error processing commit:', err)
+      console.error(`Error processing commit ${gitCommitId}:`, err)
       await db
         .update(gitCommitsTable)
         .set({
@@ -81,32 +102,63 @@ const processInternal = async (toProcess: { id: string }[]) => {
 }
 
 export async function GET() {
-  const toProcess = await db
-    .update(gitCommitsTable)
-    .set({
-      queueStatus: 'processing',
-      updatedAt: sql`now()`
-    })
-    .where(eq(gitCommitsTable.queueStatus, 'pending'))
-    .returning({
-      id: gitCommitsTable.id
-    })
+  const [commitToProcess] = await db
+    .select({ id: gitCommitsTable.id })
+    .from(gitCommitsTable)
+    .where(eq(gitCommitsTable.sha, 'c51c191fd163b0ad9ac9c44bebbb19980701c0f3'))
+    .limit(1)
 
-  await processInternal(toProcess)
+  if (commitToProcess) {
+    await db
+      .update(gitCommitsTable)
+      .set({
+        queueStatus: 'processing',
+        updatedAt: sql`now()`
+      })
+      .where(eq(gitCommitsTable.id, commitToProcess.id))
 
-  const toProcessErrors = await db
-    .update(gitCommitsTable)
-    .set({
-      errorMessage: null,
-      queueStatus: 'processing',
-      updatedAt: sql`now()`
-    })
+    await processInternal([commitToProcess])
+    return Response.json(
+      {
+        message: 'Processed pending commit',
+        processedCount: 1
+      },
+      { status: 200 }
+    )
+  }
+
+  // Handle error commits
+  const [errorToProcess] = await db
+    .select({ id: gitCommitsTable.id })
+    .from(gitCommitsTable)
     .where(eq(gitCommitsTable.queueStatus, 'error'))
-    .returning({
-      id: gitCommitsTable.id
-    })
+    .limit(1)
 
-  await processInternal(toProcessErrors)
+  if (errorToProcess) {
+    await db
+      .update(gitCommitsTable)
+      .set({
+        queueStatus: 'processing',
+        updatedAt: sql`now()`,
+        errorMessage: null
+      })
+      .where(eq(gitCommitsTable.id, errorToProcess.id))
 
-  return Response.json({ message: 'Processed' }, { status: 200 })
+    await processInternal([errorToProcess])
+    return Response.json(
+      {
+        message: 'Processed error commit',
+        processedCount: 1
+      },
+      { status: 200 }
+    )
+  }
+
+  return Response.json(
+    {
+      message: 'No commits to process',
+      processedCount: 0
+    },
+    { status: 200 }
+  )
 }
