@@ -62,22 +62,7 @@ const processInternal = async (toProcess: { id: string }[]) => {
       await db
         .update(gitCommitsTable)
         .set({
-          correctness: score.correctness,
-          bestPractices: score.bestPractices,
-          readability: score.readability,
-          performance: score.performance,
-          security: score.security,
-          technicalQuality: score.technicalQuality,
-          category: score.category,
-          domain: score.domain,
-          impact: score.impact,
-          classificationReasoning: score.classificationReasoning,
-          categoryMultiplier: score.categoryMultiplier,
-          domainMultiplier: score.domainMultiplier,
-          impactMultiplier: score.impactMultiplier,
-          summary: score.summary,
-          finalScore: score.finalScore,
-          contributionPoints: score.contributionPoints,
+          ...score,
           queueStatus: 'processed',
           updatedAt: sql`now()`
         })
@@ -97,63 +82,32 @@ const processInternal = async (toProcess: { id: string }[]) => {
 }
 
 export async function GET() {
-  const [commitToProcess] = await db
-    .select({ id: gitCommitsTable.id })
-    .from(gitCommitsTable)
-    .where(eq(gitCommitsTable.sha, 'c51c191fd163b0ad9ac9c44bebbb19980701c0f3'))
-    .limit(1)
+  const toProcess = await db
+    .update(gitCommitsTable)
+    .set({
+      queueStatus: 'processing',
+      updatedAt: sql`now()`
+    })
+    .where(eq(gitCommitsTable.queueStatus, 'pending'))
+    .returning({
+      id: gitCommitsTable.id
+    })
 
-  if (commitToProcess) {
-    await db
-      .update(gitCommitsTable)
-      .set({
-        queueStatus: 'processing',
-        updatedAt: sql`now()`
-      })
-      .where(eq(gitCommitsTable.id, commitToProcess.id))
+  await processInternal(toProcess)
 
-    await processInternal([commitToProcess])
-    return Response.json(
-      {
-        message: 'Processed pending commit',
-        processedCount: 1
-      },
-      { status: 200 }
-    )
-  }
+  // const toProcessErrors = await db
+  //   .update(gitCommitsTable)
+  //   .set({
+  //     errorMessage: null,
+  //     queueStatus: 'processing',
+  //     updatedAt: sql`now()`
+  //   })
+  //   .where(eq(gitCommitsTable.queueStatus, 'error'))
+  //   .returning({
+  //     id: gitCommitsTable.id
+  //   })
 
-  // Handle error commits
-  const [errorToProcess] = await db
-    .select({ id: gitCommitsTable.id })
-    .from(gitCommitsTable)
-    .where(eq(gitCommitsTable.queueStatus, 'error'))
-    .limit(1)
+  // await processInternal(toProcessErrors)
 
-  if (errorToProcess) {
-    await db
-      .update(gitCommitsTable)
-      .set({
-        queueStatus: 'processing',
-        updatedAt: sql`now()`,
-        errorMessage: null
-      })
-      .where(eq(gitCommitsTable.id, errorToProcess.id))
-
-    await processInternal([errorToProcess])
-    return Response.json(
-      {
-        message: 'Processed error commit',
-        processedCount: 1
-      },
-      { status: 200 }
-    )
-  }
-
-  return Response.json(
-    {
-      message: 'No commits to process',
-      processedCount: 0
-    },
-    { status: 200 }
-  )
+  return Response.json({ message: 'Processed' }, { status: 200 })
 }
