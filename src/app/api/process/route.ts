@@ -31,10 +31,7 @@ const processInternal = async (toProcess: { id: string }[]) => {
         }
       })
 
-      if (!gitCommit) {
-        console.log(`Commit ${gitCommitId} not found, skipping`)
-        continue
-      }
+      if (!gitCommit) continue
 
       let commitDiffs: any[] = []
 
@@ -55,7 +52,6 @@ const processInternal = async (toProcess: { id: string }[]) => {
       }
 
       if (!commitDiffs.length) {
-        console.log(`No diffs found for commit ${gitCommitId}, deleting`)
         await db
           .delete(gitCommitsTable)
           .where(eq(gitCommitsTable.id, gitCommitId))
@@ -86,8 +82,6 @@ const processInternal = async (toProcess: { id: string }[]) => {
           updatedAt: sql`now()`
         })
         .where(eq(gitCommitsTable.id, gitCommitId))
-
-      console.log(`Successfully processed commit ${gitCommitId}`)
     } catch (err) {
       console.error(`Error processing commit ${gitCommitId}:`, err)
       await db

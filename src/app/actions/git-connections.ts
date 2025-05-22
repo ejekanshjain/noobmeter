@@ -57,7 +57,6 @@ export async function getGitConnections() {
         }
       }
     })
-    console.log('connections', connections)
     return { connections }
   } catch (error) {
     console.error('Failed to fetch git connections:', error)
