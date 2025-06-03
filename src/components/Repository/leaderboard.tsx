@@ -1,9 +1,10 @@
 'use client'
 
 import {
-  getPaginatedAuthors,
-  getRepositoryLeaderboard
-} from '@/app/actions/repo-metrics'
+  getAuthorDetailedStats,
+  getPaginatedAuthors
+} from '@/app/actions/author'
+import { getRepositoryLeaderboardAction } from '@/app/actions/repo-metrics'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -51,6 +52,7 @@ import {
   Users
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import AuthorDetailsCard from './author-detail-card'
 import PodiumChart from './podium-chart'
 
 interface LeaderboardProps {
@@ -66,11 +68,27 @@ interface LeaderboardEntry {
   avgScore: number
   bestScore: number
   worstScore: number
+  commitsByCategory: { [category: string]: number }
+  commitsByDomain: { [domain: string]: number }
+  commitsByImpact: { [impact: string]: number }
+  contributionPoints: number
+  averageQualityMetrics: {
+    correctness: number
+    bestPractices: number
+    readability: number
+    performance: number
+    security: number
+    technicalQuality: number
+  }
+  logarithmicAdjustment: number
 }
 
 interface AuthorEntry {
   authorEmail: string
   avgScore: number
+  commitCount: number
+  bestScore: number
+  worstScore: number
 }
 
 export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
@@ -85,23 +103,38 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
   const [pageSize, setPageSize] = useState(10)
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
-  const [selectedAuthor, setSelectedAuthor] = useState<AuthorEntry | null>(null)
+  const [selectedAuthor, setSelectedAuthor] = useState<any>(null)
+  const [authorDetails, setAuthorDetails] = useState<any>(null)
+  const [loadingAuthorDetails, setLoadingAuthorDetails] = useState(false)
 
   const loadLeaderboard = useCallback(async () => {
     setLoading(true)
     try {
-      const result = await getRepositoryLeaderboard(repositoryId)
+      const result = await getRepositoryLeaderboardAction(repositoryId)
       if (!result?.error) {
         const typedLeaderboard: LeaderboardEntry[] = (
           result?.leaderboard || []
         ).map((entry: any) => ({
           authorEmail: entry?.authorEmail || '',
-          authorName: entry?.authorName,
+          authorName: entry?.authorName || entry?.authorEmail?.split('@')[0],
           avatarUrl: entry?.avatarUrl || '',
           commitCount: Number(entry?.commitCount || 0),
           avgScore: Number(entry?.avgScore || 0),
           bestScore: Number(entry?.bestScore || 0),
-          worstScore: Number(entry?.worstScore || 0)
+          worstScore: Number(entry?.worstScore || 0),
+          commitsByCategory: entry?.commitsByCategory || {},
+          commitsByDomain: entry?.commitsByDomain || {},
+          commitsByImpact: entry?.commitsByImpact || {},
+          contributionPoints: Number(entry?.contributionPoints || 0),
+          averageQualityMetrics: entry?.averageQualityMetrics || {
+            correctness: 0,
+            bestPractices: 0,
+            readability: 0,
+            performance: 0,
+            security: 0,
+            technicalQuality: 0
+          },
+          logarithmicAdjustment: Number(entry?.logarithmicAdjustment || 1)
         }))
         setLeaderboard(typedLeaderboard)
       }
@@ -132,6 +165,20 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
       setIsSearching(false)
     }
   }, [repositoryId, currentPage, pageSize, searchQuery])
+
+  const loadAuthorDetails = async (authorEmail: string) => {
+    setLoadingAuthorDetails(true)
+    try {
+      const details = await getAuthorDetailedStats(authorEmail, repositoryId)
+      if (!details?.error) {
+        setAuthorDetails(details)
+      }
+    } catch (err) {
+      console.error('Failed to load author details:', err)
+    } finally {
+      setLoadingAuthorDetails(false)
+    }
+  }
 
   useEffect(() => {
     loadLeaderboard()
@@ -244,133 +291,24 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
               </Card>
             ) : leaderboard.length > 0 ? (
               leaderboard.slice(0, 5).map((entry, index) => (
-                <Card
+                <AuthorDetailsCard
                   key={entry.authorEmail || `entry-${index}`}
-                  className="border-border group relative overflow-hidden border transition-all duration-300 hover:shadow-md"
-                >
-                  <div
-                    className="absolute inset-0 opacity-10 transition-opacity duration-300 group-hover:opacity-20"
-                    style={{
-                      background: `linear-gradient(135deg, ${elegantColors[index % elegantColors.length]}20 0%, transparent 100%)`
-                    }}
-                  />
-
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <Badge
-                        variant="outline"
-                        className="px-2 py-0.5"
-                        style={{
-                          borderColor:
-                            elegantColors[index % elegantColors.length],
-                          color: elegantColors[index % elegantColors.length]
-                        }}
-                      >
-                        #{index + 1}
-                      </Badge>
-                      <div className="text-sm font-medium">
-                        <span className="text-muted-foreground mr-1">
-                          Score:
-                        </span>
-                        <span
-                          style={{
-                            color: elegantColors[index % elegantColors.length]
-                          }}
-                        >
-                          {Number(entry.avgScore).toFixed(1)}
-                        </span>
-                      </div>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent>
-                    <div className="flex items-center gap-3">
-                      <Avatar
-                        className="h-12 w-12 border shadow-sm"
-                        style={{
-                          borderColor:
-                            elegantColors[index % elegantColors.length]
-                        }}
-                      >
-                        <AvatarImage
-                          src={
-                            getDiceBearAvatar(entry.authorEmail, index) ||
-                            '/placeholder.svg' ||
-                            '/placeholder.svg' ||
-                            '/placeholder.svg'
-                          }
-                        />
-                        <AvatarFallback
-                          style={{
-                            backgroundColor: `${elegantColors[index % elegantColors.length]}20`,
-                            color: elegantColors[index % elegantColors.length]
-                          }}
-                        >
-                          {getInitials(entry.authorEmail || '')}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <div>
-                        <div className="font-medium">
-                          {entry.authorName || 'Unknown User'}
-                        </div>
-                        <div className="text-muted-foreground text-xs">
-                          {getNoobTitle(index, entry.avgScore)}
-                        </div>
-                        <div className="text-muted-foreground flex items-center gap-1 text-xs">
-                          <User className="h-3 w-3" />
-                          <span className="max-w-[180px] truncate">
-                            {entry.authorEmail || 'unknown@example.com'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
-                      <div className="bg-muted/30 rounded p-2">
-                        <div className="text-muted-foreground text-xs">
-                          Commits
-                        </div>
-                        <div className="font-medium">{entry.commitCount}</div>
-                      </div>
-
-                      <div className="bg-muted/30 rounded p-2">
-                        <div className="text-muted-foreground text-xs">
-                          Best
-                        </div>
-                        <div className="font-medium">
-                          {Number(entry.bestScore).toFixed(1)}
-                        </div>
-                      </div>
-
-                      <div className="bg-muted/30 rounded p-2">
-                        <div className="text-muted-foreground text-xs">
-                          Worst
-                        </div>
-                        <div className="font-medium">
-                          {Number(entry.worstScore).toFixed(1)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4">
-                      <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
-                        <span>Noob Score</span>
-                        <span>{Number(entry.avgScore).toFixed(1)}/100</span>
-                      </div>
-                      <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${Math.max(3, entry.avgScore)}%`,
-                            backgroundColor:
-                              elegantColors[index % elegantColors.length]
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  author={{
+                    authorEmail: entry.authorEmail,
+                    avgScore: entry.avgScore,
+                    rank: index + 1,
+                    commitCount: entry.commitCount,
+                    bestScore: entry.bestScore,
+                    worstScore: entry.worstScore
+                  }}
+                  colorIndex={index % elegantColors.length}
+                  commitsByCategory={entry.commitsByCategory}
+                  commitsByDomain={entry.commitsByDomain}
+                  commitsByImpact={entry.commitsByImpact}
+                  averageQualityMetrics={entry.averageQualityMetrics}
+                  contributionPoints={entry.contributionPoints}
+                  logarithmicAdjustment={entry.logarithmicAdjustment}
+                />
               ))
             ) : (
               <Card className="border-border col-span-full border p-6">
@@ -436,6 +374,7 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
                       </TableHead>
                       <TableHead>Author</TableHead>
                       <TableHead className="text-right">Noob Score</TableHead>
+                      <TableHead className="text-center">Commits</TableHead>
                       <TableHead className="w-[100px] text-center">
                         Details
                       </TableHead>
@@ -444,13 +383,13 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
                   <TableBody>
                     {isSearching ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
+                        <TableCell colSpan={5} className="h-24 text-center">
                           <RefreshCw className="text-muted-foreground mx-auto h-6 w-6 animate-spin" />
                         </TableCell>
                       </TableRow>
                     ) : authors.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
+                        <TableCell colSpan={5} className="h-24 text-center">
                           No authors found
                         </TableCell>
                       </TableRow>
@@ -513,7 +452,7 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
                                     <span
                                       className={`font-medium ${getScoreColor(author.avgScore)}`}
                                     >
-                                      {Number(author.avgScore).toFixed(1)}
+                                      {author.avgScore.toFixed(1)}
                                     </span>
                                   </TooltipTrigger>
                                   <TooltipContent>
@@ -525,13 +464,21 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
                               </TooltipProvider>
                             </TableCell>
                             <TableCell className="text-center">
+                              <span className="font-medium">
+                                {author.commitCount}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-center">
                               <Dialog>
                                 <DialogTrigger asChild>
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     className="h-8 w-8 p-0"
-                                    onClick={() => setSelectedAuthor(author)}
+                                    onClick={() => {
+                                      setSelectedAuthor(author)
+                                      loadAuthorDetails(author.authorEmail)
+                                    }}
                                   >
                                     <User className="h-4 w-4" />
                                     <span className="sr-only">
@@ -539,126 +486,53 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
                                     </span>
                                   </Button>
                                 </DialogTrigger>
-                                <DialogContent>
+                                <DialogContent className="max-h-[80vh] max-w-4xl overflow-y-auto">
                                   <DialogHeader>
-                                    <DialogTitle>Author Details</DialogTitle>
+                                    <DialogTitle>Author Profile</DialogTitle>
                                     <DialogDescription>
-                                      Detailed information about this
-                                      contributor
+                                      Comprehensive analysis of{' '}
+                                      {selectedAuthor?.authorEmail}
                                     </DialogDescription>
                                   </DialogHeader>
 
-                                  {selectedAuthor && (
-                                    <div className="space-y-4 py-4">
-                                      <div className="flex items-center gap-4">
-                                        <Avatar
-                                          className="h-16 w-16 border-2"
-                                          style={{
-                                            borderColor:
-                                              elegantColors[colorIndex]
-                                          }}
-                                        >
-                                          <AvatarImage
-                                            src={
-                                              getDiceBearAvatar(
-                                                selectedAuthor.authorEmail,
-                                                index
-                                              ) || '/placeholder.svg'
-                                            }
-                                          />
-                                          <AvatarFallback
-                                            style={{
-                                              backgroundColor: `${elegantColors[colorIndex]}20`,
-                                              color: elegantColors[colorIndex]
-                                            }}
-                                          >
-                                            {getInitials(
-                                              selectedAuthor.authorEmail
-                                            )}
-                                          </AvatarFallback>
-                                        </Avatar>
-
-                                        <div>
-                                          <h3 className="text-lg font-semibold">
-                                            {
-                                              selectedAuthor.authorEmail.split(
-                                                '@'
-                                              )[0]
-                                            }
-                                          </h3>
-                                          <p className="text-muted-foreground text-sm">
-                                            {selectedAuthor.authorEmail}
-                                          </p>
-                                          <p className="mt-1 text-sm">
-                                            Rank:{' '}
-                                            <span className="font-medium">
-                                              #{rank}
-                                            </span>
-                                          </p>
-                                        </div>
-                                      </div>
-
-                                      <div className="bg-muted/30 rounded-lg p-4">
-                                        <h4 className="mb-2 font-medium">
-                                          Noob Score Analysis
-                                        </h4>
-                                        <div className="space-y-3">
-                                          <div>
-                                            <div className="mb-1 flex justify-between text-sm">
-                                              <span>Overall Score</span>
-                                              <span
-                                                className={getScoreColor(
-                                                  selectedAuthor.avgScore
-                                                )}
-                                              >
-                                                {Number(
-                                                  selectedAuthor.avgScore
-                                                ).toFixed(1)}
-                                                /100
-                                              </span>
-                                            </div>
-                                            <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
-                                              <div
-                                                className="h-full rounded-full transition-all duration-500"
-                                                style={{
-                                                  width: `${Math.max(3, selectedAuthor.avgScore)}%`,
-                                                  backgroundColor:
-                                                    elegantColors[colorIndex]
-                                                }}
-                                              />
-                                            </div>
-                                          </div>
-
-                                          <div className="pt-2">
-                                            <h5 className="mb-2 text-sm font-medium">
-                                              Noob Title
-                                            </h5>
-                                            <Badge
-                                              className="px-3 py-1 text-sm"
-                                              style={{
-                                                backgroundColor: `${elegantColors[colorIndex]}20`,
-                                                color:
-                                                  elegantColors[colorIndex],
-                                                borderColor:
-                                                  elegantColors[colorIndex]
-                                              }}
-                                              variant="outline"
-                                            >
-                                              {getNoobTitle(
-                                                rank - 1,
-                                                selectedAuthor.avgScore
-                                              )}
-                                            </Badge>
-                                          </div>
-                                        </div>
-                                      </div>
-
-                                      <div className="text-muted-foreground text-sm italic">
-                                        Note: View the Top Offenders tab for
-                                        more detailed statistics on this
-                                        author&apos;s commits.
-                                      </div>
+                                  {loadingAuthorDetails ? (
+                                    <div className="flex items-center justify-center py-12">
+                                      <RefreshCw className="text-muted-foreground h-8 w-8 animate-spin" />
                                     </div>
+                                  ) : (
+                                    authorDetails && (
+                                      <AuthorDetailsCard
+                                        author={{
+                                          authorEmail:
+                                            authorDetails.authorEmail,
+                                          avgScore: authorDetails.weightedScore,
+                                          rank: rank,
+                                          commitCount:
+                                            authorDetails.totalCommits,
+                                          bestScore: authorDetails.bestScore,
+                                          worstScore: authorDetails.worstScore
+                                        }}
+                                        colorIndex={colorIndex}
+                                        commitsByCategory={
+                                          authorDetails.commitsByCategory
+                                        }
+                                        commitsByDomain={
+                                          authorDetails.commitsByDomain
+                                        }
+                                        commitsByImpact={
+                                          authorDetails.commitsByImpact
+                                        }
+                                        averageQualityMetrics={
+                                          authorDetails.averageQualityMetrics
+                                        }
+                                        contributionPoints={
+                                          authorDetails.contributionPoints
+                                        }
+                                        logarithmicAdjustment={
+                                          authorDetails.logarithmicAdjustment
+                                        }
+                                      />
+                                    )
                                   )}
                                 </DialogContent>
                               </Dialog>
@@ -674,32 +548,10 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
               {/* Pagination controls */}
               {totalPages > 0 && (
                 <div className="flex items-center justify-between border-t px-4 py-4">
-                  <div className="flex items-center gap-4">
-                    <div className="text-muted-foreground text-sm">
-                      Showing{' '}
-                      <span className="font-medium">{authors.length}</span> of{' '}
-                      <span className="font-medium">{totalAuthors}</span>{' '}
-                      authors
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-sm">
-                        Show:
-                      </span>
-                      <select
-                        className="bg-background border-input rounded-md border px-2 py-1 text-sm"
-                        value={pageSize}
-                        onChange={e => {
-                          setPageSize(Number(e.target.value))
-                          setCurrentPage(1)
-                        }}
-                      >
-                        <option value={5}>5</option>
-                        <option value={10}>10</option>
-                        <option value={20}>20</option>
-                        <option value={50}>50</option>
-                      </select>
-                    </div>
+                  <div className="text-muted-foreground text-sm">
+                    Showing{' '}
+                    <span className="font-medium">{authors.length}</span> of{' '}
+                    <span className="font-medium">{totalAuthors}</span> authors
                   </div>
 
                   <div className="flex items-center gap-2">

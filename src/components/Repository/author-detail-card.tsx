@@ -21,6 +21,7 @@ import { elegantColors, getDiceBearAvatar, getNoobTitle } from '@/utils/helper'
 import {
   ArrowUpDown,
   Award,
+  BarChart3,
   Code,
   GitCommit,
   Star,
@@ -40,12 +41,31 @@ interface AuthorDetailsCardProps {
   }
   colorIndex: number
   onClose?: () => void
+  commitsByCategory?: { [category: string]: number }
+  commitsByDomain?: { [domain: string]: number }
+  commitsByImpact?: { [impact: string]: number }
+  averageQualityMetrics?: {
+    correctness: number
+    bestPractices: number
+    readability: number
+    performance: number
+    security: number
+    technicalQuality?: number
+  }
+  contributionPoints?: number
+  logarithmicAdjustment?: number
 }
 
 export default function AuthorDetailsCard({
   author,
   colorIndex,
-  onClose
+  onClose,
+  commitsByCategory,
+  commitsByDomain,
+  commitsByImpact,
+  averageQualityMetrics,
+  contributionPoints,
+  logarithmicAdjustment
 }: AuthorDetailsCardProps) {
   const [showDetails, setShowDetails] = useState(false)
 
@@ -71,8 +91,103 @@ export default function AuthorDetailsCard({
     return 'Excellent code quality'
   }
 
+  const renderCommitBreakdown = (
+    title: string,
+    data: { [key: string]: number } | undefined,
+    icon: any
+  ) => {
+    if (!data) return null
+
+    const totalCommits = Object.values(data).reduce(
+      (sum, count) => sum + count,
+      0
+    )
+    if (totalCommits === 0) return null
+
+    return (
+      <div className="space-y-3">
+        <h4 className="flex items-center gap-2 text-sm font-medium">
+          {icon}
+          {title}
+        </h4>
+        <div className="space-y-2">
+          {Object.entries(data)
+            .filter(([_, value]) => value > 0)
+            .sort(([_, a], [__, b]) => b - a)
+            .map(([key, value]) => {
+              const percentage =
+                totalCommits > 0 ? (value / totalCommits) * 100 : 0
+              return (
+                <div key={key} className="flex items-center justify-between">
+                  <span className="text-xs capitalize">
+                    {key.replace(/([A-Z])/g, ' $1')}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground text-xs font-medium">
+                      {value}
+                    </span>
+                    <Progress
+                      value={percentage}
+                      className="h-2 w-16"
+                      indicatorClassName="transition-all duration-500"
+                      style={{
+                        backgroundColor: `${elegantColors[colorIndex]}20`
+                      }}
+                    />
+                    <span className="text-muted-foreground w-8 text-xs">
+                      {percentage.toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+        </div>
+      </div>
+    )
+  }
+
+  const renderQualityMetrics = () => {
+    if (!averageQualityMetrics) return null
+
+    return (
+      <div className="space-y-3">
+        <h4 className="flex items-center gap-2 text-sm font-medium">
+          <BarChart3 className="h-4 w-4" />
+          Quality Metrics
+        </h4>
+        <div className="space-y-2">
+          {Object.entries(averageQualityMetrics)
+            .filter(([key]) => key !== 'technicalQuality') // Don't show technical quality as it's derived
+            .map(([key, value]) => (
+              <div key={key} className="flex items-center justify-between">
+                <span className="text-xs capitalize">
+                  {key.replace(/([A-Z])/g, ' $1')}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-xs font-medium">
+                    {value.toFixed(1)}
+                  </span>
+                  <Progress
+                    value={(value / 10) * 100} // Scale from 1-10 to percentage
+                    className="h-2 w-16"
+                    indicatorClassName="transition-all duration-500"
+                    style={{
+                      backgroundColor: `${elegantColors[colorIndex]}20`
+                    }}
+                  />
+                  <span className="text-muted-foreground w-8 text-xs">
+                    {((value / 10) * 100).toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <Card className="w-full max-w-md overflow-hidden border shadow-md transition-all duration-300">
+    <Card className="w-full max-w-2xl overflow-hidden border shadow-md transition-all duration-300">
       <div
         className="absolute inset-0 opacity-5"
         style={{
@@ -126,14 +241,14 @@ export default function AuthorDetailsCard({
             </AvatarFallback>
           </Avatar>
 
-          <div>
+          <div className="flex-1">
             <h3 className="text-lg font-semibold">
               {author.authorEmail.split('@')[0]}
             </h3>
-            <p className="text-muted-foreground max-w-[250px] truncate text-sm">
+            <p className="text-muted-foreground max-w-[300px] truncate text-sm">
               {author.authorEmail}
             </p>
-            <div className="mt-1 flex items-center gap-1">
+            <div className="mt-1 flex items-center gap-2">
               <Badge
                 variant="secondary"
                 className="text-xs"
@@ -144,6 +259,20 @@ export default function AuthorDetailsCard({
               >
                 {getNoobTitle(author.rank - 1, author.avgScore)}
               </Badge>
+              {contributionPoints !== undefined && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="text-xs">
+                        {contributionPoints.toFixed(0)} pts
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Total contribution points</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
           </div>
         </div>
@@ -169,7 +298,7 @@ export default function AuthorDetailsCard({
           </div>
           <Progress
             value={author.avgScore}
-            className="h-2"
+            className="h-3"
             indicatorClassName="transition-all duration-500"
             style={{
               backgroundColor: `${elegantColors[colorIndex]}30`
@@ -178,8 +307,9 @@ export default function AuthorDetailsCard({
         </div>
 
         {showDetails && (
-          <div className="animate-in fade-in slide-in-from-bottom-2 space-y-4 pt-2 duration-300">
-            <div className="grid grid-cols-2 gap-3">
+          <div className="animate-in fade-in slide-in-from-bottom-2 space-y-6 pt-4 duration-300">
+            {/* Basic Stats */}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <div className="bg-muted/30 flex flex-col items-center justify-center rounded-lg p-3">
                 <GitCommit className="text-muted-foreground mb-1 h-4 w-4" />
                 <span className="text-muted-foreground text-xs">Commits</span>
@@ -221,8 +351,67 @@ export default function AuthorDetailsCard({
               </div>
             </div>
 
-            <div className="bg-muted/20 border-muted rounded-lg border p-3">
-              <h4 className="mb-2 flex items-center gap-1 text-sm font-medium">
+            {/* Detailed Breakdowns */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="space-y-4">
+                {renderCommitBreakdown(
+                  'Commits by Category',
+                  commitsByCategory,
+                  <GitCommit className="h-4 w-4" />
+                )}
+                {renderCommitBreakdown(
+                  'Commits by Domain',
+                  commitsByDomain,
+                  <Code className="h-4 w-4" />
+                )}
+              </div>
+
+              <div className="space-y-4">
+                {renderCommitBreakdown(
+                  'Commits by Impact',
+                  commitsByImpact,
+                  <TrendingUp className="h-4 w-4" />
+                )}
+                {renderQualityMetrics()}
+              </div>
+            </div>
+
+            {/* Advanced Metrics */}
+            {(contributionPoints !== undefined ||
+              logarithmicAdjustment !== undefined) && (
+              <div className="bg-muted/20 border-muted rounded-lg border p-4">
+                <h4 className="mb-3 flex items-center gap-2 text-sm font-medium">
+                  <BarChart3 className="h-4 w-4" />
+                  Advanced Metrics
+                </h4>
+                <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+                  {contributionPoints !== undefined && (
+                    <div>
+                      <span className="text-muted-foreground">
+                        Contribution Points:
+                      </span>
+                      <span className="ml-2 font-medium">
+                        {contributionPoints.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {logarithmicAdjustment !== undefined && (
+                    <div>
+                      <span className="text-muted-foreground">
+                        Quality Adjustment:
+                      </span>
+                      <span className="ml-2 font-medium">
+                        {logarithmicAdjustment.toFixed(2)}x
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Analysis Summary */}
+            <div className="bg-muted/20 border-muted rounded-lg border p-4">
+              <h4 className="mb-2 flex items-center gap-2 text-sm font-medium">
                 <Star className="h-4 w-4 text-amber-500" />
                 Noob Analysis
               </h4>
@@ -237,12 +426,12 @@ export default function AuthorDetailsCard({
                     : 'excellent'}
                 .
                 {author.avgScore < 50 &&
-                  ' They should consider improving their coding practices.'}
+                  ' They should focus on improving their coding practices and code quality.'}
                 {author.avgScore >= 50 &&
                   author.avgScore < 70 &&
-                  ' There is room for improvement in their code quality.'}
+                  ' There is room for improvement in their code quality and best practices.'}
                 {author.avgScore >= 70 &&
-                  ' They consistently write high-quality code.'}
+                  ' They consistently write high-quality, well-structured code.'}
               </p>
             </div>
           </div>

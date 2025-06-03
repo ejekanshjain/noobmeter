@@ -4,22 +4,87 @@ import { db } from '@/db'
 import { gitCommitsTable, gitConnectionsTable } from '@/db/schema'
 import { getAuthSession } from '@/lib/auth'
 import {
-  and,
-  asc,
-  avg,
-  count,
-  countDistinct,
-  desc,
-  eq,
-  gte,
-  like,
-  lte,
-  max,
-  min,
-  or,
-  SQL,
-  sql
-} from 'drizzle-orm'
+  calculateUserScore,
+  getPaginatedAuthors,
+  getRepositoryLeaderboard
+} from '@/lib/user-scoring'
+import { and, avg, count, countDistinct, desc, eq, gte, sql } from 'drizzle-orm'
+
+export async function getTotalCommits(repositoryId: string) {
+  try {
+    const result = await db
+      .select({
+        totalCommits: count(),
+        totalAuthors: count(gitCommitsTable.authorEmail)
+      })
+      .from(gitCommitsTable)
+      .where(
+        and(
+          eq(gitCommitsTable.gitConnectionId, repositoryId),
+          eq(gitCommitsTable.queueStatus, 'processed')
+        )
+      )
+
+    return result[0]
+  } catch (error) {
+    console.error('Failed to get total commits:', error)
+    return { totalCommits: 0, totalAuthors: 0 }
+  }
+}
+
+export async function getRepositoryLeaderboardAction(repositoryId: string) {
+  try {
+    const leaderboard = await getRepositoryLeaderboard(repositoryId)
+
+    return {
+      leaderboard: leaderboard.map((entry, index) => ({
+        authorEmail: entry.authorEmail,
+        avgScore: entry.weightedScore,
+        rank: index + 1,
+        commitCount: entry.totalCommits,
+        bestScore: entry.bestScore,
+        worstScore: entry.worstScore,
+        commitsByCategory: entry.commitsByCategory,
+        commitsByDomain: entry.commitsByDomain,
+        commitsByImpact: entry.commitsByImpact,
+        contributionPoints: entry.contributionPoints,
+        categoryPoints: entry.categoryPoints,
+        averageQualityMetrics: entry.averageQualityMetrics,
+        logarithmicAdjustment: entry.logarithmicAdjustment
+      }))
+    }
+  } catch (error) {
+    console.error('Failed to get repository leaderboard:', error)
+    return { error: 'Failed to get repository leaderboard', leaderboard: [] }
+  }
+}
+
+export async function getAuthorStats(
+  authorEmail: string,
+  repositoryId?: string
+) {
+  try {
+    const stats = await calculateUserScore(authorEmail, repositoryId)
+
+    return {
+      authorEmail: stats.authorEmail,
+      avgScore: stats.weightedScore,
+      totalCommits: stats.totalCommits,
+      commitsByCategory: stats.commitsByCategory,
+      commitsByDomain: stats.commitsByDomain,
+      commitsByImpact: stats.commitsByImpact,
+      contributionPoints: stats.contributionPoints,
+      categoryPoints: stats.categoryPoints,
+      bestScore: stats.bestScore,
+      worstScore: stats.worstScore,
+      averageQualityMetrics: stats.averageQualityMetrics,
+      logarithmicAdjustment: stats.logarithmicAdjustment
+    }
+  } catch (error) {
+    console.error('Failed to get author stats:', error)
+    return { error: 'Failed to get author stats' }
+  }
+}
 
 export async function getRepositoryMetrics(repositoryId: string) {
   const session = await getAuthSession()
@@ -40,20 +105,18 @@ export async function getRepositoryMetrics(repositoryId: string) {
       return { error: 'Repository not found or access denied' }
     }
 
+    // Get basic metrics using the correct schema fields
     const metricsResult = await db
       .select({
         totalCommits: count(),
         avgCorrectness: avg(gitCommitsTable.correctness),
-        avgReadability: avg(gitCommitsTable.readability),
         avgBestPractices: avg(gitCommitsTable.bestPractices),
+        avgReadability: avg(gitCommitsTable.readability),
         avgPerformance: avg(gitCommitsTable.performance),
         avgSecurity: avg(gitCommitsTable.security),
-        avgDryness: avg(gitCommitsTable.dryness),
-        avgScopeDiscipline: avg(gitCommitsTable.scopeDiscipline),
-        avgTestability: avg(gitCommitsTable.testability),
-        avgImpactToNoise: avg(gitCommitsTable.impactToNoise),
-        avgWorkComplexity: avg(gitCommitsTable.workComplexity),
-        avgFinalScore: avg(gitCommitsTable.finalScore)
+        avgTechnicalQuality: avg(gitCommitsTable.technicalQuality),
+        avgFinalScore: avg(gitCommitsTable.finalScore),
+        avgContributionPoints: avg(gitCommitsTable.contributionPoints)
       })
       .from(gitCommitsTable)
       .where(
@@ -75,22 +138,85 @@ export async function getRepositoryMetrics(repositoryId: string) {
 
     const totalAuthors = totalAuthorsResult[0]?.totalAuthors || 0
 
+    // Get category distribution
+    const categoryDistribution = await db
+      .select({
+        category: gitCommitsTable.category,
+        count: count(),
+        avgScore: avg(gitCommitsTable.finalScore)
+      })
+      .from(gitCommitsTable)
+      .where(
+        and(
+          eq(gitCommitsTable.gitConnectionId, repositoryId),
+          eq(gitCommitsTable.queueStatus, 'processed')
+        )
+      )
+      .groupBy(gitCommitsTable.category)
+
+    // Get domain distribution
+    const domainDistribution = await db
+      .select({
+        domain: gitCommitsTable.domain,
+        count: count(),
+        avgScore: avg(gitCommitsTable.finalScore)
+      })
+      .from(gitCommitsTable)
+      .where(
+        and(
+          eq(gitCommitsTable.gitConnectionId, repositoryId),
+          eq(gitCommitsTable.queueStatus, 'processed')
+        )
+      )
+      .groupBy(gitCommitsTable.domain)
+
+    // Get impact distribution
+    const impactDistribution = await db
+      .select({
+        impact: gitCommitsTable.impact,
+        count: count(),
+        avgScore: avg(gitCommitsTable.finalScore)
+      })
+      .from(gitCommitsTable)
+      .where(
+        and(
+          eq(gitCommitsTable.gitConnectionId, repositoryId),
+          eq(gitCommitsTable.queueStatus, 'processed')
+        )
+      )
+      .groupBy(gitCommitsTable.impact)
+
     const metrics = {
       totalCommits: metricsResult[0]?.totalCommits || 0,
-      avgCorrectness: metricsResult[0]?.avgCorrectness || 0,
-      avgReadability: metricsResult[0]?.avgReadability || 0,
-      avgBestPractices: metricsResult[0]?.avgBestPractices || 0,
-      avgPerformance: metricsResult[0]?.avgPerformance || 0,
-      avgSecurity: metricsResult[0]?.avgSecurity || 0,
-      avgDryness: metricsResult[0]?.avgDryness || 0,
-      avgScopeDiscipline: metricsResult[0]?.avgScopeDiscipline || 0,
-      avgTestability: metricsResult[0]?.avgTestability || 0,
-      avgImpactToNoise: metricsResult[0]?.avgImpactToNoise || 0,
-      avgWorkComplexity: metricsResult[0]?.avgWorkComplexity || 0,
-      avgFinalScore: metricsResult[0]?.avgFinalScore || 0,
-      totalAuthors
+      avgCorrectness: Number(metricsResult[0]?.avgCorrectness || 0),
+      avgBestPractices: Number(metricsResult[0]?.avgBestPractices || 0),
+      avgReadability: Number(metricsResult[0]?.avgReadability || 0),
+      avgPerformance: Number(metricsResult[0]?.avgPerformance || 0),
+      avgSecurity: Number(metricsResult[0]?.avgSecurity || 0),
+      avgTechnicalQuality: Number(metricsResult[0]?.avgTechnicalQuality || 0),
+      avgFinalScore: Number(metricsResult[0]?.avgFinalScore || 0),
+      avgContributionPoints: Number(
+        metricsResult[0]?.avgContributionPoints || 0
+      ),
+      totalAuthors,
+      categoryDistribution: categoryDistribution.map(item => ({
+        category: item.category,
+        count: item.count,
+        avgScore: Number(item.avgScore || 0)
+      })),
+      domainDistribution: domainDistribution.map(item => ({
+        domain: item.domain,
+        count: item.count,
+        avgScore: Number(item.avgScore || 0)
+      })),
+      impactDistribution: impactDistribution.map(item => ({
+        impact: item.impact,
+        count: item.count,
+        avgScore: Number(item.avgScore || 0)
+      }))
     }
 
+    // Get commits by date for the last 30 days
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
@@ -105,7 +231,7 @@ export async function getRepositoryMetrics(repositoryId: string) {
         and(
           eq(gitCommitsTable.gitConnectionId, repositoryId),
           eq(gitCommitsTable.queueStatus, 'processed'),
-          sql`${gitCommitsTable.date} >= ${thirtyDaysAgo}`
+          gte(gitCommitsTable.date, thirtyDaysAgo)
         )
       )
       .groupBy(sql`to_char(${gitCommitsTable.date}, 'YYYY-MM-DD')`)
@@ -113,7 +239,11 @@ export async function getRepositoryMetrics(repositoryId: string) {
 
     return {
       metrics,
-      commitsByDate
+      commitsByDate: commitsByDate.map(item => ({
+        date: item.date,
+        count: item.count,
+        avgScore: Number(item.avgScore || 0)
+      }))
     }
   } catch (error) {
     console.error('Failed to fetch repository metrics:', error)
@@ -129,6 +259,9 @@ export async function getRepositoryCommits(
     searchQuery?: string
     authorFilter?: string
     dateFilter?: string
+    categoryFilter?: string
+    domainFilter?: string
+    impactFilter?: string
   }
 ) {
   const session = await getAuthSession()
@@ -149,8 +282,9 @@ export async function getRepositoryCommits(
       return { error: 'Repository not found or access denied' }
     }
 
-    const whereConditions: (SQL | undefined)[] = [
-      eq(gitCommitsTable.gitConnectionId, repositoryId)
+    const whereConditions = [
+      eq(gitCommitsTable.gitConnectionId, repositoryId),
+      eq(gitCommitsTable.queueStatus, 'processed')
     ]
 
     if (filters) {
@@ -166,21 +300,34 @@ export async function getRepositoryCommits(
         )
       }
 
+      if (filters.categoryFilter) {
+        whereConditions.push(
+          eq(gitCommitsTable.category, filters.categoryFilter as any)
+        )
+      }
+
+      if (filters.domainFilter) {
+        whereConditions.push(
+          eq(gitCommitsTable.domain, filters.domainFilter as any)
+        )
+      }
+
+      if (filters.impactFilter) {
+        whereConditions.push(
+          eq(gitCommitsTable.impact, filters.impactFilter as any)
+        )
+      }
+
       if (filters.dateFilter) {
         const dateObj = new Date(filters.dateFilter)
         const nextDay = new Date(dateObj)
         nextDay.setDate(nextDay.getDate() + 1)
-
-        const dateConditions: SQL[] = []
-
-        dateConditions.push(gte(gitCommitsTable.date, dateObj))
-        dateConditions.push(lte(gitCommitsTable.date, nextDay))
-
-        whereConditions.push(and(...dateConditions))
+        whereConditions.push(gte(gitCommitsTable.date, dateObj))
+        whereConditions.push(sql`${gitCommitsTable.date} < ${nextDay}`)
       }
     }
 
-    const finalWhere = and(...(whereConditions.filter(Boolean) as SQL[]))
+    const finalWhere = and(...whereConditions)
 
     const commits = await db.query.gitCommitsTable.findMany({
       where: finalWhere,
@@ -203,7 +350,7 @@ export async function getRepositoryCommits(
     return {
       commits,
       pagination: {
-        total: totalCount[0]?.count,
+        total: totalCount[0]?.count || 0,
         limit,
         offset
       },
@@ -215,156 +362,5 @@ export async function getRepositoryCommits(
   }
 }
 
-export async function getTotalCommits(repositoryId: string) {
-  const session = await getAuthSession()
-  if (!session?.user) {
-    return { error: 'Unauthorized' }
-  }
-
-  try {
-    const result = await db
-      .select({
-        totalCommits: count(),
-        totalAuthors: countDistinct(gitCommitsTable.authorEmail)
-      })
-      .from(gitCommitsTable)
-      .where(
-        and(
-          eq(gitCommitsTable.gitConnectionId, repositoryId),
-          eq(gitCommitsTable.queueStatus, 'processed')
-        )
-      )
-
-    const { totalCommits, totalAuthors } = result[0] || {
-      totalCommits: 0,
-      totalAuthors: 0
-    }
-
-    return { totalCommits, totalAuthors }
-  } catch (error) {
-    console.error('Failed to fetch repository commits:', error)
-    return { error: 'Failed to fetch repository commits' }
-  }
-}
-
-export async function getRepositoryLeaderboard(repositoryId: string) {
-  const session = await getAuthSession()
-  if (!session?.user) {
-    return { error: 'Unauthorized' }
-  }
-
-  try {
-    const repository = await db.query.gitConnectionsTable.findFirst({
-      where: and(
-        eq(gitConnectionsTable.id, repositoryId),
-        eq(gitConnectionsTable.userId, session.user.id),
-        eq(gitConnectionsTable.isActive, true)
-      )
-    })
-
-    if (!repository) {
-      return { error: 'Repository not found or access denied' }
-    }
-
-    const leaderboardData = await db
-      .select({
-        authorEmail: gitCommitsTable.authorEmail,
-        commitCount: count(),
-        avgFinalScore: avg(gitCommitsTable.finalScore),
-        bestScore: max(gitCommitsTable.finalScore),
-        worstScore: min(gitCommitsTable.finalScore)
-      })
-      .from(gitCommitsTable)
-      .where(
-        and(
-          eq(gitCommitsTable.gitConnectionId, repositoryId),
-          eq(gitCommitsTable.queueStatus, 'processed')
-        )
-      )
-      .groupBy(gitCommitsTable.authorEmail)
-      .orderBy(asc(avg(gitCommitsTable.finalScore)))
-
-    const leaderboard = leaderboardData.map(entry => ({
-      authorEmail: entry.authorEmail,
-      commitCount: entry.commitCount,
-      avgScore: entry.avgFinalScore || 0,
-      bestScore: entry.bestScore || 0,
-      worstScore: entry.worstScore || 0,
-      authorName: entry.authorEmail
-        ?.split('@')[0]
-        ?.replace(/[.+]/g, ' ')
-        .replace(/\b\w/g, l => l.toUpperCase()),
-      avatarUrl: `https://www.gravatar.com/avatar/${Buffer.from(
-        entry.authorEmail?.trim().toLowerCase() || ''
-      ).toString('hex')}?d=identicon`
-    }))
-
-    return { leaderboard }
-  } catch (error) {
-    console.error('Failed to fetch repository leaderboard:', error)
-    return { error: 'Failed to fetch repository leaderboard' }
-  }
-}
-
-export async function getPaginatedAuthors({
-  repositoryId,
-  page = 1,
-  pageSize = 10,
-  search = ''
-}: {
-  repositoryId: string
-  page?: number
-  pageSize?: number
-  search?: string
-}) {
-  const session = await getAuthSession()
-  if (!session?.user) {
-    return { error: 'Unauthorized' }
-  }
-
-  try {
-    const offset = (page - 1) * pageSize
-
-    const searchCondition = search
-      ? or(like(gitCommitsTable.authorEmail, `%${search}%`))
-      : undefined
-
-    const whereCondition = searchCondition
-      ? and(
-          eq(gitCommitsTable.gitConnectionId, repositoryId),
-          eq(gitCommitsTable.queueStatus, 'processed'),
-          searchCondition
-        )
-      : and(
-          eq(gitCommitsTable.gitConnectionId, repositoryId),
-          eq(gitCommitsTable.queueStatus, 'processed')
-        )
-
-    const authors = await db
-      .select({
-        authorEmail: gitCommitsTable.authorEmail,
-        avgScore: sql<number>`avg(${gitCommitsTable.finalScore})`
-      })
-      .from(gitCommitsTable)
-      .where(whereCondition)
-      .groupBy(gitCommitsTable.authorEmail)
-      .orderBy(sql`avg(${gitCommitsTable.finalScore}) ASC`)
-      .limit(pageSize)
-      .offset(offset)
-
-    const totalAuthorsRes = await db
-      .select({
-        total: sql<number>`count(distinct ${gitCommitsTable.authorEmail})`
-      })
-      .from(gitCommitsTable)
-      .where(whereCondition)
-
-    return {
-      authors,
-      totalAuthors: totalAuthorsRes[0]?.total || 0
-    }
-  } catch (error) {
-    console.error('Failed to fetch paginated authors:', error)
-    return { error: 'Failed to fetch authors' }
-  }
-}
+// Export the getPaginatedAuthors function
+export { getPaginatedAuthors }
