@@ -14,7 +14,7 @@ import { Bell, HelpCircle, LogOut, Menu, Settings, User } from 'lucide-react'
 import Link from 'next/link'
 
 interface HeaderProps {
-  user: {
+  user?: {
     name?: string | null
     email?: string | null
     image?: string | null
