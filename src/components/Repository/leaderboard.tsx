@@ -100,7 +100,6 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
   const [authors, setAuthors] = useState<AuthorEntry[]>([])
   const [totalAuthors, setTotalAuthors] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [selectedAuthor, setSelectedAuthor] = useState<any>(null)
@@ -151,7 +150,7 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
       const result = await getPaginatedAuthors({
         repositoryId,
         page: currentPage,
-        pageSize,
+        pageSize: 10,
         search: searchQuery
       })
 
@@ -164,7 +163,7 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
     } finally {
       setIsSearching(false)
     }
-  }, [repositoryId, currentPage, pageSize, searchQuery])
+  }, [repositoryId, currentPage, searchQuery])
 
   const loadAuthorDetails = async (authorEmail: string) => {
     setLoadingAuthorDetails(true)
@@ -186,7 +185,7 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
 
   useEffect(() => {
     loadAuthors()
-  }, [loadAuthors, currentPage, pageSize])
+  }, [loadAuthors, currentPage])
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -216,7 +215,7 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
     return 'text-green-500'
   }
 
-  const totalPages = Math.ceil(totalAuthors / pageSize)
+  const totalPages = Math.ceil(totalAuthors / 10)
 
   return (
     <div className="flex flex-col gap-6">
@@ -244,7 +243,7 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
         </Button>
       </div>
 
-      <Tabs defaultValue="leaderboard" className="w-full">
+      <Tabs defaultValue="all-authors" className="w-full">
         <TabsList className="bg-muted/50 mb-6 grid w-full grid-cols-2 rounded-xl p-1">
           <TabsTrigger
             value="leaderboard"
@@ -282,7 +281,7 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
             </Card>
           )}
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="relative grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {loading ? (
               <Card className="border-border col-span-full border p-6 shadow-sm">
                 <div className="flex items-center justify-center py-12">
@@ -395,7 +394,7 @@ export function Leaderboard({ repositoryId, repository }: LeaderboardProps) {
                       </TableRow>
                     ) : (
                       authors.map((author, index) => {
-                        const rank = (currentPage - 1) * pageSize + index + 1
+                        const rank = (currentPage - 1) * 10 + index + 1
                         const colorIndex = index % elegantColors.length
 
                         return (
