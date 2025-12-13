@@ -1,7 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['api.dicebear.com', 'www.gravatar.com'],
+    remotePatterns: [
+      {
+        hostname: 'api.dicebear.com'
+      },
+      {
+        hostname: 'www.gravatar.com'
+      }
+    ],
     unoptimized: true
   }
 }
